@@ -273,8 +273,8 @@ button {
 .metric-card {
   border-radius: 14px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #fef3c7, #fffbeb);
-  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, #eff6ff 80%, #e0f2fe 100%);
+  border: 1px solid rgba(59, 130, 246, 0.18);
 }
 
 .metric-label {

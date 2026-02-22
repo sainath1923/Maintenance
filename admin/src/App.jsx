@@ -672,7 +672,7 @@ function AdminDashboard({ onLogout }) {
           )}
 
           {activeTab === 'team' && (
-            <div className="card">
+            <div className="card dashboard-card">
               <div className="card-header-row">
                 <div className="card-title">Team</div>
                 <span className="chip">{users.length} users</span>
@@ -701,7 +701,7 @@ function AdminDashboard({ onLogout }) {
                   />
                 </div>
               </div>
-              <ul className="list-scroll">
+              <div className="dashboard-grid" style={{marginTop:0}}>
                 {users
                   .filter((u) => userRoleFilter === 'all' || u.role === userRoleFilter)
                   .filter((u) => {
@@ -712,40 +712,36 @@ function AdminDashboard({ onLogout }) {
                     return name.includes(q) || email.includes(q);
                   })
                   .map((u) => (
-                    <li key={u._id}>
-                      <div className="user-row-main">
+                    <div key={u._id} className="metric-card" style={{minWidth:220, marginBottom:8}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                         <div>
-                          <div>
-                            <strong>{u.name}</strong> ({u.email})
-                          </div>
-                          <div className="text-muted">
-                            Role: {u.role}
-                            {u.role === 'technician' && u.technicianType
-                              ? ` (${u.technicianType})`
-                              : ''}
-                          </div>
-                          <div className="text-muted">
-                            Mobile: {u.phone || '-'}
-                          </div>
-                          <div className="text-muted">
-                            Status: {u.isActive ? 'Active' : 'Inactive'}
-                          </div>
+                          <strong>{u.name}</strong> <span style={{color:'#6b7280',fontSize:'12px'}}>({u.email})</span>
                         </div>
-                        <div>
-                          <button
-                            className={
-                              'btn-small status-toggle-button ' +
-                              (u.isActive ? 'deactivate' : 'activate')
-                            }
-                            onClick={() => toggleActive(u)}
-                          >
-                            {u.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </div>
+                        <button
+                          className={
+                            'btn-small status-toggle-button ' +
+                            (u.isActive ? 'deactivate' : 'activate')
+                          }
+                          onClick={() => toggleActive(u)}
+                        >
+                          {u.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
                       </div>
-                    </li>
+                      <div className="text-muted" style={{marginTop:'4px'}}>
+                        Role: {u.role}
+                        {u.role === 'technician' && u.technicianType
+                          ? ` (${u.technicianType})`
+                          : ''}
+                      </div>
+                      <div className="text-muted">
+                        Mobile: {u.phone || '-'}
+                      </div>
+                      <div className="text-muted">
+                        Status: {u.isActive ? 'Active' : 'Inactive'}
+                      </div>
+                    </div>
                   ))}
-              </ul>
+              </div>
             </div>
           )}
 
@@ -906,7 +902,7 @@ function AdminDashboard({ onLogout }) {
           )}
 
           {activeTab === 'requests' && (
-            <div className="card">
+            <div className="card dashboard-card">
               <div className="card-header-row">
                 <div className="card-title">All maintenance requests</div>
                 <span className="chip">{requests.length} items</span>
@@ -940,7 +936,7 @@ function AdminDashboard({ onLogout }) {
                   </select>
                 </div>
               </div>
-              <ul className="list-scroll">
+              <div className="dashboard-grid" style={{marginTop:0}}>
                 {requests
                   .filter(
                     (r) =>
@@ -953,31 +949,31 @@ function AdminDashboard({ onLogout }) {
                       (r.priority && r.priority.toLowerCase() === requestPriorityFilter.toLowerCase())
                   )
                   .map((r) => (
-                  <li key={r._id}>
-                    <div className="request-row-header">
-                      <strong>{r.title}</strong>
-                      <span
-                        className={
-                          'status-pill ' +
-                          ('status-' + (r.status || 'Pending').toLowerCase().replace(/\s+/g, '-'))
-                        }
-                      >
-                        {r.status || 'Pending'}
-                      </span>
+                    <div key={r._id} className="metric-card" style={{minWidth:220, marginBottom:8}}>
+                      <div className="request-row-header">
+                        <strong>{r.title}</strong>
+                        <span
+                          className={
+                            'status-pill ' +
+                            ('status-' + (r.status || 'Pending').toLowerCase().replace(/\s+/g, '-'))
+                          }
+                        >
+                          {r.status || 'Pending'}
+                        </span>
+                      </div>
+                      <div className="text-muted">
+                        Flat {r.flatNumber || '-'}, {r.block || 'No block'}
+                      </div>
+                      <div className="text-muted">
+                        Type: {r.requestType || '-'} · Category: {r.maintenanceCategory || '-'} ·
+                        Priority: {r.priority}
+                      </div>
+                      <div className="text-muted">
+                        Comments: {r.description || '-'}
+                      </div>
                     </div>
-                    <div className="text-muted">
-                      Flat {r.flatNumber || '-'}, {r.block || 'No block'}
-                    </div>
-                    <div className="text-muted">
-                      Type: {r.requestType || '-'} · Category: {r.maintenanceCategory || '-'} ·
-                      Priority: {r.priority}
-                    </div>
-                    <div className="text-muted">
-                      Comments: {r.description || '-'}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                  ))}
+              </div>
             </div>
           )}
         </div>
