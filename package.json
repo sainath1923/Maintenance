@@ -1,0 +1,13 @@
+{
+  "name": "maintenance-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "server": "cd backend && node src/index.js",
+    "tenant": "cd tenant && npm start",
+    "supervisor": "cd supervisor && npm start",
+    "admin": "cd admin && npm start",
+    "technician": "cd technician && npm run dev",
+    "dev": "cd backend && npm run dev"
+  }
+}
