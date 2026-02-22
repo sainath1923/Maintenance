@@ -4,6 +4,7 @@ const CompanyProfileSchema = new mongoose.Schema(
   {
     logoUrl: { type: String },
     name: { type: String },
+    buildingName: { type: String },
     buildingAddress: { type: String },
     buildingUrl: { type: String }
   },

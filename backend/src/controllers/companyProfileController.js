@@ -4,11 +4,18 @@ exports.getProfile = async (req, res) => {
   try {
     const profile = await CompanyProfile.findOne({});
     if (!profile) {
-      return res.json({ logoUrl: '', name: '', buildingAddress: '', buildingUrl: '' });
+      return res.json({
+        logoUrl: '',
+        name: '',
+        buildingName: '',
+        buildingAddress: '',
+        buildingUrl: ''
+      });
     }
     res.json({
       logoUrl: profile.logoUrl || '',
       name: profile.name || '',
+      buildingName: profile.buildingName || '',
       buildingAddress: profile.buildingAddress || '',
       buildingUrl: profile.buildingUrl || ''
     });
@@ -19,17 +26,18 @@ exports.getProfile = async (req, res) => {
 
 exports.upsertProfile = async (req, res) => {
   try {
-    const { logoUrl, name, buildingAddress, buildingUrl } = req.body;
+    const { logoUrl, name, buildingName, buildingAddress, buildingUrl } = req.body;
 
     const updated = await CompanyProfile.findOneAndUpdate(
       {},
-      { logoUrl, name, buildingAddress, buildingUrl },
+      { logoUrl, name, buildingName, buildingAddress, buildingUrl },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
     res.json({
       logoUrl: updated.logoUrl || '',
       name: updated.name || '',
+      buildingName: updated.buildingName || '',
       buildingAddress: updated.buildingAddress || '',
       buildingUrl: updated.buildingUrl || ''
     });
