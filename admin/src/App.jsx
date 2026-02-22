@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE =
+  import.meta.env.VITE_API_BASE ||
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : '');
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
