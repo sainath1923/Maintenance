@@ -439,6 +439,12 @@ function TenantDashboard({ onLogout }) {
                         {r.status}
                       </span>
                     </div>
+                    {r.createdAt && (
+                      <div className="app-subtitle">
+                        Raised on:{' '}
+                        {new Date(r.createdAt).toLocaleString()}
+                      </div>
+                    )}
                     {r.notes && (
                       <div className="app-subtitle">
                         Technician comments: {r.notes}
