@@ -27,6 +27,27 @@ function useCompanyLogo() {
   return logo;
 }
 
+function useBuildingName() {
+  const [building, setBuilding] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/company-profile`);
+        const data = await res.json();
+        if (res.ok) {
+          setBuilding(data.buildingName || data.buildingAddress || data.name || '');
+        }
+      } catch {
+        // ignore errors
+      }
+    };
+    load();
+  }, []);
+
+  return building;
+}
+
 function Login({ onLoggedIn }) {
   const [email, setEmail] = useState('tech1@example.com');
   const [password, setPassword] = useState('Technician@123');
@@ -58,6 +79,7 @@ function Login({ onLoggedIn }) {
   };
 
   const companyLogo = useCompanyLogo();
+  const buildingName = useBuildingName();
 
   return (
     <div className="app-shell">
@@ -72,11 +94,12 @@ function Login({ onLoggedIn }) {
               />
             )}
             <div>
-              <div className="app-title">Technician Portal</div>
-              <div className="app-subtitle">Sign in to see your assigned jobs</div>
+              <div className="app-title">Technician Console</div>
+              <div className="app-subtitle">Sign in to work on assigned tickets</div>
             </div>
           </div>
-          <div className="app-badge">On-site Team</div>
+          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          <div className="app-badge">Field Operations</div>
         </div>
         <div className="app-main">
           <div className="card">
@@ -132,6 +155,7 @@ function TechnicianDashboard({ onLogout }) {
   ];
 
   const companyLogo = useCompanyLogo();
+  const buildingName = useBuildingName();
 
   const token = localStorage.getItem('technician_token');
 
@@ -229,6 +253,7 @@ function TechnicianDashboard({ onLogout }) {
               <div className="app-subtitle">Work through your assigned tickets</div>
             </div>
           </div>
+          {buildingName && <div className="header-building-name">{buildingName}</div>}
           <button
             className="btn-outline btn-small"
             onClick={() => {
@@ -251,28 +276,81 @@ function TechnicianDashboard({ onLogout }) {
             <ul className="list-scroll">
               {requests.map((r) => (
                 <li key={r._id}>
-                  <div className="job-row-header">
-                    <div>
-                      <strong>{r.title}</strong>{' '}
-                      <span
-                        className={
-                          'status-pill ' +
-                          `status-${(r.status || '')
-                            .toLowerCase()
-                            .replace(/\s+/g, '-')}`
-                        }
-                      >
-                        {r.status}
-                      </span>
+                  <div className="ticket-row">
+                    <div className="ticket-main">
+                      <div className="ticket-header-row">
+                        <div className="ticket-title">{r.title}</div>
+                        <span
+                          className={
+                            'status-pill ' +
+                            `status-${(r.status || '')
+                              .toLowerCase()
+                              .replace(/\s+/g, '-')}`
+                          }
+                        >
+                          {r.status}
+                        </span>
+                      </div>
+                      <div className="ticket-subline">
+                        <span className="ticket-label">Flat</span> {r.flatNumber || '-'}, {r.block || 'No block'} ·{' '}
+                        <span className="ticket-label">Priority:</span> {r.priority}
+                      </div>
+                      <div className="ticket-subline">
+                        <span className="ticket-label">Type:</span> {r.requestType || '-'} ·{' '}
+                        <span className="ticket-label">Category:</span> {r.maintenanceCategory || '-'}
+                      </div>
+                      {editingStatusId === r._id && (
+                        <div style={{ marginTop: '4px' }}>
+                          <div className="field" style={{ marginBottom: '4px' }}>
+                            <label>Status</label>
+                            <select
+                              value={statusById[r._id] || r.status}
+                              onChange={(e) =>
+                                setStatusById((prev) => ({ ...prev, [r._id]: e.target.value }))
+                              }
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Rejected">Rejected</option>
+                              <option value="Completed">Completed</option>
+                            </select>
+                          </div>
+                          <div className="field" style={{ marginBottom: '4px' }}>
+                            <label>Comment</label>
+                            <select
+                              value={commentById[r._id] || ''}
+                              onChange={(e) =>
+                                setCommentById((prev) => ({ ...prev, [r._id]: e.target.value }))
+                              }
+                            >
+                              <option value="">Select comment</option>
+                              {COMMENT_OPTIONS.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              className="btn-small btn-primary"
+                              type="button"
+                              onClick={() => updateStatus(r._id)}
+                            >
+                              Submit
+                            </button>
+                            <button
+                              className="btn-small btn-outline"
+                              type="button"
+                              onClick={() => setEditingStatusId(null)}
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        className="btn-small btn-outline"
-                        type="button"
-                        onClick={() => setDrawerRequestId(r._id)}
-                      >
-                        View
-                      </button>
+                    <div className="ticket-actions">
                       {editingStatusId !== r._id && (
                         <button
                           className="btn-small btn-primary"
@@ -282,62 +360,15 @@ function TechnicianDashboard({ onLogout }) {
                           Update status
                         </button>
                       )}
+                      <button
+                        className="btn-small btn-view"
+                        type="button"
+                        onClick={() => setDrawerRequestId(r._id)}
+                      >
+                        View
+                      </button>
                     </div>
                   </div>
-                  <div className="app-subtitle">
-                    Flat {r.flatNumber || '-'}, {r.block || 'No block'} · Priority {r.priority}
-                  </div>
-                  <div className="app-subtitle">Type: {r.requestType || '-'} · Category: {r.maintenanceCategory || '-'}</div>
-                  {editingStatusId === r._id && (
-                    <div style={{ marginTop: '4px' }}>
-                      <div className="field" style={{ marginBottom: '4px' }}>
-                        <label>Status</label>
-                        <select
-                          value={statusById[r._id] || r.status}
-                          onChange={(e) =>
-                            setStatusById((prev) => ({ ...prev, [r._id]: e.target.value }))
-                          }
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Rejected">Rejected</option>
-                          <option value="Completed">Completed</option>
-                        </select>
-                      </div>
-                      <div className="field" style={{ marginBottom: '4px' }}>
-                        <label>Comment</label>
-                        <select
-                          value={commentById[r._id] || ''}
-                          onChange={(e) =>
-                            setCommentById((prev) => ({ ...prev, [r._id]: e.target.value }))
-                          }
-                        >
-                          <option value="">Select comment</option>
-                          {COMMENT_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          className="btn-small btn-primary"
-                          type="button"
-                          onClick={() => updateStatus(r._id)}
-                        >
-                          Submit
-                        </button>
-                        <button
-                          className="btn-small btn-outline"
-                          type="button"
-                          onClick={() => setEditingStatusId(null)}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>
@@ -411,39 +442,42 @@ function TechnicianDashboard({ onLogout }) {
                           <div>{r.mobileNumber || '-'}</div>
                         </div>
                         <div className="detail-item" style={{ flexBasis: '100%' }}>
-                          <div className="text-muted">Invoice</div>
-                          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                            {r.invoiceUrl ? (
-                              <a
-                                href={`${API_BASE}${r.invoiceUrl}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                View invoice
-                              </a>
-                            ) : (
-                              <span className="text-muted">No invoice uploaded</span>
-                            )}
-                            <label className="btn-small btn-outline file-upload-button">
-                              {uploadingInvoiceId === r._id ? 'Uploading…' : 'Upload invoice'}
-                              <input
-                                type="file"
-                                accept="image/*,application/pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files && e.target.files[0];
-                                  if (file) {
-                                    uploadInvoice(r._id, file);
-                                    e.target.value = '';
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-                        </div>
-                        <div className="detail-item" style={{ flexBasis: '100%' }}>
                           <div className="text-muted">Description</div>
                           <div className="text-muted">{r.description || '-'}</div>
                         </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="drawer-section-title">Invoice</div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '8px'
+                        }}
+                      >
+                        {r.invoiceUrl ? (
+                          <a href={`${API_BASE}${r.invoiceUrl}`} target="_blank" rel="noreferrer">
+                            View invoice
+                          </a>
+                        ) : (
+                          <span className="text-muted">No invoice uploaded</span>
+                        )}
+                        <label className="btn-small btn-outline file-upload-button">
+                          {uploadingInvoiceId === r._id ? 'Uploading…' : 'Upload invoice'}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={(e) => {
+                              const file = e.target.files && e.target.files[0];
+                              if (file) {
+                                uploadInvoice(r._id, file);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
                     <div>
@@ -461,7 +495,7 @@ function TechnicianDashboard({ onLogout }) {
                               }));
                             }}
                           >
-                            Edit
+                            Add comment
                           </button>
                         )}
                       </div>

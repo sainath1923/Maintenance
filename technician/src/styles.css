@@ -67,6 +67,22 @@ body {
   color: var(--text-muted);
 }
 
+.header-building-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  margin: 0 12px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--primary-dark);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.95), rgba(219, 234, 254, 0.95));
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
 .app-subtitle {
   font-size: 14px;
   color: var(--text-muted);
@@ -204,12 +220,55 @@ button {
   background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.9));
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
+ 
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
 
-.job-row-header {
+.ticket-main {
+  flex: 1;
+}
+
+.ticket-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ticket-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ticket-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ticket-subline {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.ticket-label {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.btn-view {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #ffffff;
+  border: none;
 }
 
 .drawer-backdrop {
