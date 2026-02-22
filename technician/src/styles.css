@@ -182,6 +182,11 @@ button {
   font-size: 13px;
 }
 
+.text-success {
+  color: #15803d;
+  font-size: 13px;
+}
+
 .list-scroll {
   max-height: 260px;
   overflow: auto;
@@ -191,9 +196,13 @@ button {
 }
 
 .list-scroll li {
-  padding: 8px 4px;
-  border-bottom: 1px solid rgba(209, 213, 219, 0.9);
+  padding: 10px 12px;
+  margin-bottom: 8px;
   font-size: 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.9));
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .job-row-header {
@@ -201,6 +210,165 @@ button {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+
+.drawer-panel {
+  width: 100%;
+  max-width: 100%;
+  height: 80vh;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 55%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 55%),
+    #f9fafb;
+  border-radius: 18px 18px 0 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 -20px 45px rgba(15, 23, 42, 0.24);
+  padding: 18px 22px 22px;
+  backdrop-filter: blur(12px);
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.98), rgba(37, 99, 235, 0.94));
+  color: #e5e7eb;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.38);
+}
+
+.drawer-header .text-muted {
+  color: #dbeafe;
+}
+
+.drawer-header .btn-outline {
+  color: #e5e7eb;
+  border-color: rgba(239, 246, 255, 0.8);
+  background: rgba(15, 23, 42, 0.18);
+}
+
+.drawer-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.drawer-body > div {
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.drawer-comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.drawer-body > div {
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+
+.details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.detail-item {
+  min-width: 150px;
+}
+
+.drawer-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #1d4ed8;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.drawer-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.status-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.status-pending {
+  background: rgba(148, 163, 184, 0.15);
+  color: #4b5563;
+}
+
+.status-in-progress {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.8);
+  color: #1d4ed8;
+}
+
+.status-waiting-for-parts {
+  background: rgba(234, 179, 8, 0.18);
+  border-color: rgba(234, 179, 8, 0.8);
+  color: #854d0e;
+}
+
+.status-rejected {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.9);
+  color: #b91c1c;
+}
+
+.status-completed {
+  background: rgba(34, 197, 94, 0.18);
+  border-color: rgba(34, 197, 94, 0.9);
+  color: #166534;
+}
+
+.file-upload-button input[type='file'] {
+  display: none;
 }
 @media (max-width: 900px) {
   .app-card {
