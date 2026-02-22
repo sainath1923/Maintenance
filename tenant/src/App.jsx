@@ -363,7 +363,7 @@ function TenantDashboard({ onLogout }) {
           <div className="card card-requests">
             <div className="card-header-row">
               <div className="card-title">My requests</div>
-              <span className="chip">{requests.length} open</span>
+              <span className="chip">{requests.length} requests</span>
             </div>
             <ul className="list-scroll">
               {requests.map((r) => (
@@ -383,9 +383,11 @@ function TenantDashboard({ onLogout }) {
                       {r.status}
                     </span>
                   </div>
-                  <div className="app-subtitle">
-                    Technician comments: {r.notes || '-'}
-                  </div>
+                  {r.notes && (
+                    <div className="app-subtitle">
+                      Technician comments: {r.notes}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
