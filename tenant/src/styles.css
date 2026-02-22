@@ -95,6 +95,28 @@ body {
   gap: 16px;
 }
 
+.tabs-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tab-button {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: #f9fafb;
+  color: var(--text-muted);
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.tab-button.active {
+  background: #fff7ed;
+  border-color: rgba(249, 115, 22, 0.7);
+  color: #9a3412;
+}
+
 
 .section-title {
   font-size: 14px;
