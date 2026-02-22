@@ -27,6 +27,27 @@ function useCompanyLogo() {
   return logo;
 }
 
+function useBuildingName() {
+  const [building, setBuilding] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/company-profile`);
+        const data = await res.json();
+        if (res.ok) {
+          setBuilding(data.buildingName || data.buildingAddress || data.name || '');
+        }
+      } catch {
+        // ignore errors
+      }
+    };
+    load();
+  }, []);
+
+  return building;
+}
+
 function Login({ onLoggedIn }) {
   const [email, setEmail] = useState('tenant1@example.com');
   const [password, setPassword] = useState('Tenant@123');
@@ -58,6 +79,7 @@ function Login({ onLoggedIn }) {
   };
 
   const companyLogo = useCompanyLogo();
+  const buildingName = useBuildingName();
 
   return (
     <div className="app-shell">
@@ -76,6 +98,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Login to raise and track maintenance requests</div>
             </div>
           </div>
+          {buildingName && <div className="header-building-name">{buildingName}</div>}
           <div className="app-badge">Residential Maintenance</div>
         </div>
         <div className="app-main">
@@ -125,6 +148,7 @@ function TenantDashboard({ onLogout }) {
   const [lastSnapshot, setLastSnapshot] = useState(null);
 
   const companyLogo = useCompanyLogo();
+  const buildingName = useBuildingName();
 
   const token = localStorage.getItem('tenant_token');
 
@@ -233,6 +257,7 @@ function TenantDashboard({ onLogout }) {
               <div className="app-subtitle">Create new requests and review your history</div>
             </div>
           </div>
+          {buildingName && <div className="header-building-name">{buildingName}</div>}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
