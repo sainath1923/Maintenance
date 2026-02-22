@@ -182,18 +182,25 @@ button {
   font-size: 13px;
 }
 
+.text-success {
+  color: #15803d;
+  font-size: 13px;
+}
+
 .list-scroll {
-  max-height: 260px;
-  overflow: auto;
   margin: 0;
   padding-left: 0;
   list-style: none;
 }
 
 .list-scroll li {
-  padding: 8px 4px;
-  border-bottom: 1px solid rgba(30, 41, 59, 0.9);
+  padding: 10px 12px;
+  margin-bottom: 8px;
   font-size: 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.9));
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 .ticket-row {
@@ -228,18 +235,37 @@ button {
   width: 100%;
   max-width: 100%;
   height: 80vh;
-  background: #ffffff;
-  border-radius: 16px 16px 0 0;
-  border-top: 1px solid var(--border-subtle);
-  box-shadow: 0 -18px 40px rgba(15, 23, 42, 0.18);
-  padding: 16px 20px 20px;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 55%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 55%),
+    #f9fafb;
+  border-radius: 18px 18px 0 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 -20px 45px rgba(15, 23, 42, 0.24);
+  padding: 18px 22px 22px;
+  backdrop-filter: blur(12px);
 }
 
 .drawer-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.98), rgba(37, 99, 235, 0.94));
+  color: #e5e7eb;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.38);
+}
+
+.drawer-header .text-muted {
+  color: #e5e7eb;
+}
+
+.drawer-header .btn-outline {
+  color: #e5e7eb;
+  border-color: rgba(248, 250, 252, 0.8);
+  background: rgba(15, 23, 42, 0.18);
 }
 
 .drawer-title {
@@ -250,8 +276,16 @@ button {
 .drawer-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   font-size: 13px;
+}
+
+.drawer-body > div {
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
 }
 
 .details-row {
@@ -261,15 +295,23 @@ button {
 }
 
 .detail-item {
-  min-width: 140px;
+  min-width: 150px;
 }
 
 .drawer-section-title {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--text-muted);
-  margin-bottom: 4px;
+  color: #1d4ed8;
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 
 .checkbox-row {
@@ -309,32 +351,33 @@ button {
 }
 
 .status-pending {
-  background: rgba(148, 163, 184, 0.15);
-  color: #e5e7eb;
+  background: #fef9c3;
+  border-color: rgba(234, 179, 8, 0.7);
+  color: #92400e;
 }
 
 .status-in-progress {
-  background: rgba(59, 130, 246, 0.18);
+  background: #dbeafe;
   border-color: rgba(59, 130, 246, 0.8);
-  color: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .status-waiting-for-parts {
-  background: rgba(234, 179, 8, 0.18);
-  border-color: rgba(234, 179, 8, 0.8);
-  color: #fef9c3;
+  background: #faf5ff;
+  border-color: rgba(147, 51, 234, 0.7);
+  color: #6b21a8;
 }
 
 .status-rejected {
-  background: rgba(248, 113, 113, 0.16);
+  background: #fee2e2;
   border-color: rgba(248, 113, 113, 0.9);
-  color: #fee2e2;
+  color: #b91c1c;
 }
 
 .status-completed {
-  background: rgba(34, 197, 94, 0.18);
+  background: #dcfce7;
   border-color: rgba(34, 197, 94, 0.9);
-  color: #bbf7d0;
+  color: #166534;
 }
 
 @media (max-width: 900px) {

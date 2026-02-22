@@ -121,6 +121,7 @@ function SupervisorDashboard({ onLogout }) {
   });
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
 
   const companyLogo = useCompanyLogo();
 
@@ -197,6 +198,7 @@ function SupervisorDashboard({ onLogout }) {
 
   const assignTechnician = async (id) => {
     setError('');
+    setInfoMessage('');
     const technicianId = assignment[id];
     if (!technicianId) return;
     try {
@@ -215,6 +217,7 @@ function SupervisorDashboard({ onLogout }) {
       }
       // simple visual feedback and refresh list so assignment is reflected
       setAssignment((prev) => ({ ...prev, [id]: '' }));
+      setInfoMessage('Ticket assigned to technician successfully.');
       await fetchAssigned();
     } catch (err) {
       setError('Network error');
@@ -256,13 +259,24 @@ function SupervisorDashboard({ onLogout }) {
               <span className="chip">{requests.length} tasks</span>
             </div>
             {error && <p className="text-danger">{error}</p>}
+            {infoMessage && <p className="text-success">{infoMessage}</p>}
             <ul className="list-scroll">
               {requests.map((r) => (
                 <li key={r._id}>
                   <div className="ticket-row">
                     <div className="ticket-main">
                       <div>
-                        <strong>{r.title}</strong> <span>— {r.status}</span>
+                        <strong>{r.title}</strong>{' '}
+                        <span
+                          className={
+                            'status-pill ' +
+                            `status-${(r.status || '')
+                              .toLowerCase()
+                              .replace(/\s+/g, '-')}`
+                          }
+                        >
+                          {r.status}
+                        </span>
                       </div>
                       <div className="text-muted">
                         Flat {r.flatNumber || '-'}, {r.block || 'No block'}
@@ -409,6 +423,65 @@ function SupervisorDashboard({ onLogout }) {
                           <div className="text-muted">Priority</div>
                           <div>{r.priority}</div>
                         </div>
+                        {r.technician && (
+                          <div className="detail-item" style={{ flexBasis: '100%' }}>
+                            <div className="text-muted">Technician</div>
+                            {(() => {
+                              const tech = technicians.find((t) => t._id === r.technician);
+                              if (!tech) {
+                                return <div className="text-muted">-</div>;
+                              }
+                              const phone = tech.phone || '';
+                              const label = `${tech.name}${
+                                tech.technicianType ? ` (${tech.technicianType})` : ''
+                              }`;
+                              return (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    flexWrap: 'wrap'
+                                  }}
+                                >
+                                  <span>{label}</span>
+                                  {phone && (
+                                    <>
+                                      <span className="text-muted">{phone}</span>
+                                      <button
+                                        type="button"
+                                        className="btn-small btn-outline"
+                                        onClick={() => {
+                                          if (navigator.clipboard) {
+                                            navigator.clipboard.writeText(phone).catch(() => {});
+                                          }
+                                        }}
+                                      >
+                                        Copy
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        <div className="detail-item" style={{ flexBasis: '100%' }}>
+                          <div className="text-muted">Invoice</div>
+                          <div>
+                            {r.invoiceUrl ? (
+                              <a
+                                href={`${API_BASE}${r.invoiceUrl}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View invoice
+                              </a>
+                            ) : (
+                              <span className="text-muted">No invoice uploaded</span>
+                            )}
+                          </div>
+                        </div>
                         <div className="detail-item">
                           <div className="text-muted">Comments</div>
                           <div className="text-muted">{r.description || '-'}</div>
@@ -512,6 +585,11 @@ function SupervisorDashboard({ onLogout }) {
                     <div>
                       <div className="drawer-section-title">Technician comments</div>
                       <div className="text-muted">{r.notes || '-'}</div>
+                      <div className="text-muted" style={{ fontSize: '11px', marginTop: '4px' }}>
+                        {r.updatedAt
+                          ? `Last updated: ${new Date(r.updatedAt).toLocaleString()}`
+                          : ''}
+                      </div>
                     </div>
                   </div>
                 </>
