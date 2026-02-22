@@ -1,4 +1,6 @@
 const Request = require('../models/Request');
+const fs = require('fs');
+const path = require('path');
 
 exports.createRequest = async (req, res) => {
   try {
@@ -90,6 +92,34 @@ exports.listAll = async (req, res) => {
     const requests = await Request.find().sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.uploadInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ message: 'No invoice file uploaded' });
+    }
+
+    const relativePath = `/uploads/invoices/${req.file.filename}`;
+
+    const request = await Request.findByIdAndUpdate(
+      id,
+      { invoiceUrl: relativePath },
+      { new: true }
+    );
+
+    if (!request) {
+      // Clean up file if request not found
+      fs.unlink(path.join(__dirname, '..', '..', relativePath), () => {});
+      return res.status(404).json({ message: 'Request not found' });
+    }
+
+    res.json(request);
+  } catch (err) {
+    console.error('Upload invoice error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 };

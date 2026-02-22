@@ -31,6 +31,7 @@ const RequestSchema = new mongoose.Schema(
     notes: String,
     completionReport: String,
     completionImages: [String],
+    invoiceUrl: String,
     costEstimate: Number,
     costActual: Number
   },
