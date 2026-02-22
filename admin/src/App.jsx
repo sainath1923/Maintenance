@@ -28,6 +28,27 @@ function useCompanyLogo() {
   return logo;
 }
 
+function useBuildingName() {
+  const [building, setBuilding] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/company-profile`);
+        const data = await res.json();
+        if (res.ok) {
+          setBuilding(data.buildingName || data.buildingAddress || data.name || '');
+        }
+      } catch {
+        // ignore errors
+      }
+    };
+    load();
+  }, []);
+
+  return building;
+}
+
 function Login({ onLoggedIn }) {
   const [email, setEmail] = useState('admin1@example.com');
   const [password, setPassword] = useState('Admin@123');
@@ -59,6 +80,7 @@ function Login({ onLoggedIn }) {
   };
 
   const companyLogo = useCompanyLogo();
+  const buildingName = useBuildingName();
 
   return (
     <div className="app-shell">
@@ -77,6 +99,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Secure access to properties and user management</div>
             </div>
           </div>
+          {buildingName && <div className="header-building-name">{buildingName}</div>}
           <div className="app-badge">System Admin</div>
         </div>
         <div className="app-main">
@@ -115,14 +138,16 @@ function AdminDashboard({ onLogout }) {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
 
-  const [activeTab, setActiveTab] = useState('company'); // 'company' | 'add' | 'team' | 'requests'
+  const [activeTab, setActiveTab] = useState('company'); // 'company' | 'add' | 'team' | 'requests' | 'dashboard'
 
   const [companyLogo, setCompanyLogo] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [buildingName, setBuildingName] = useState('');
   const [buildingAddress, setBuildingAddress] = useState('');
   const [buildingUrl, setBuildingUrl] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const qrCanvasRef = useRef(null);
 
@@ -140,6 +165,8 @@ function AdminDashboard({ onLogout }) {
 
   const [requestStatusFilter, setRequestStatusFilter] = useState('all');
   const [requestPriorityFilter, setRequestPriorityFilter] = useState('all');
+
+  const headerBuildingName = useBuildingName();
 
   const fetchAllRequests = async () => {
     try {
@@ -176,6 +203,7 @@ function AdminDashboard({ onLogout }) {
       if (!res.ok) throw new Error(data.message || 'Failed to load company profile');
       setCompanyLogo(data.logoUrl || '');
       setCompanyName(data.name || '');
+      setBuildingName(data.buildingName || '');
       setBuildingAddress(data.buildingAddress || '');
       setBuildingUrl(data.buildingUrl || '');
       if (data.buildingUrl) {
@@ -198,6 +226,7 @@ function AdminDashboard({ onLogout }) {
         body: JSON.stringify({
           logoUrl: companyLogo,
           name: companyName,
+          buildingName,
           buildingAddress,
           buildingUrl
         })
@@ -270,6 +299,83 @@ function AdminDashboard({ onLogout }) {
     }
   }, []);
 
+  const totalTasks = requests.length;
+  const pendingCount = requests.filter((r) => r.status === 'Pending').length;
+  const inProgressCount = requests.filter((r) => r.status === 'In Progress').length;
+  const completedCount = requests.filter((r) => r.status === 'Completed').length;
+
+  const priorityCounts = requests.reduce(
+    (acc, r) => {
+      const key = r.priority || 'Low';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const statusCounts = requests.reduce(
+    (acc, r) => {
+      const key = r.status || 'Pending';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const techniciansOnly = users.filter((u) => u.role === 'technician');
+
+  const technicianUsage = requests.reduce((acc, r) => {
+    if (r.technician) {
+      acc[r.technician] = (acc[r.technician] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const topTechnicians = Object.entries(technicianUsage)
+    .map(([id, count]) => {
+      const tech = techniciansOnly.find((t) => t._id === id);
+      return tech ? { tech, count } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  const categoryCounts = requests.reduce(
+    (acc, r) => {
+      const key = r.maintenanceCategory || 'Other';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
+
+  const maxPriorityValue = Math.max(1, ...Object.values(priorityCounts));
+  const maxStatusValue = Math.max(1, ...Object.values(statusCounts));
+  const maxCategoryValue = Math.max(1, ...Object.values(categoryCounts));
+
+  const now = new Date();
+  const monthBuckets = [];
+  for (let i = 5; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString(undefined, { month: 'short' });
+    monthBuckets.push({ key, label });
+  }
+
+  const monthlyTrend = monthBuckets.map((bucket) => {
+    const count = requests.filter((r) => {
+      if (!r.createdAt) return false;
+      const created = new Date(r.createdAt);
+      const createdKey = `${created.getFullYear()}-${String(
+        created.getMonth() + 1
+      ).padStart(2, '0')}`;
+      return createdKey === bucket.key;
+    }).length;
+    return { ...bucket, count };
+  });
+
+  const maxMonthlyValue = Math.max(1, ...monthlyTrend.map((m) => m.count));
+
   return (
     <div className="app-shell">
       <div className="app-card">
@@ -287,6 +393,9 @@ function AdminDashboard({ onLogout }) {
               <div className="app-subtitle">User access and maintenance overview</div>
             </div>
           </div>
+          {headerBuildingName && (
+            <div className="header-building-name">{headerBuildingName}</div>
+          )}
           <button
             className="btn-outline btn-small"
             onClick={() => {
@@ -328,6 +437,13 @@ function AdminDashboard({ onLogout }) {
             >
               Requests
             </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'dashboard' ? ' active' : '')}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              Dashboard
+            </button>
           </div>
 
           {activeTab === 'company' && (
@@ -335,6 +451,16 @@ function AdminDashboard({ onLogout }) {
               <div className="card-header-row">
                 <div className="card-title">Company profile</div>
               </div>
+              {(companyName || buildingName || buildingAddress) && (
+                <div className="app-subtitle" style={{ marginBottom: '8px' }}>
+                  {companyName}
+                  {buildingName
+                    ? ` · ${buildingName}`
+                    : buildingAddress
+                    ? ` · ${buildingAddress}`
+                    : ''}
+                </div>
+              )}
               <>
                   <form className="two-column-form" onSubmit={(e) => e.preventDefault()}>
                     <div className="field">
@@ -342,6 +468,7 @@ function AdminDashboard({ onLogout }) {
                       <input
                         type="file"
                         accept="image/*"
+                        disabled={!isEditingProfile}
                         onChange={(e) => {
                           const file = e.target.files && e.target.files[0];
                           if (!file) return;
@@ -361,6 +488,16 @@ function AdminDashboard({ onLogout }) {
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         placeholder="Company name"
+                        disabled={!isEditingProfile}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Building name</label>
+                      <input
+                        value={buildingName}
+                        onChange={(e) => setBuildingName(e.target.value)}
+                        placeholder="Building name"
+                        disabled={!isEditingProfile}
                       />
                     </div>
                     <div className="field">
@@ -369,6 +506,7 @@ function AdminDashboard({ onLogout }) {
                         value={buildingAddress}
                         onChange={(e) => setBuildingAddress(e.target.value)}
                         placeholder="Building address"
+                        disabled={!isEditingProfile}
                       />
                     </div>
                     <div className="field">
@@ -377,6 +515,7 @@ function AdminDashboard({ onLogout }) {
                         value={buildingUrl}
                         onChange={(e) => setBuildingUrl(e.target.value)}
                         placeholder="https://maps.google.com/..."
+                        disabled={!isEditingProfile}
                       />
                     </div>
                     <button
@@ -433,16 +572,20 @@ function AdminDashboard({ onLogout }) {
                         <button
                           type="button"
                           className="btn-primary"
-                          disabled={!qrUrl}
                           onClick={async () => {
+                            if (!isEditingProfile) {
+                              setIsEditingProfile(true);
+                              return;
+                            }
                             try {
                               await saveCompanyProfile();
+                              setIsEditingProfile(false);
                             } catch {
                               // error already handled
                             }
                           }}
                         >
-                          {profileSaved ? 'Edit' : 'Submit'}
+                          {isEditingProfile ? 'Save' : 'Edit'}
                         </button>
                         <button
                           type="button"
@@ -603,6 +746,162 @@ function AdminDashboard({ onLogout }) {
                     </li>
                   ))}
               </ul>
+            </div>
+          )}
+
+          {activeTab === 'dashboard' && (
+            <div className="card dashboard-card">
+              <div className="card-header-row">
+                <div className="card-title">Portfolio overview</div>
+                <span className="chip">Live view</span>
+              </div>
+              {error && <p className="text-danger">{error}</p>}
+              <div className="dashboard-grid">
+                <div className="dashboard-metrics">
+                  <div className="metric-card">
+                    <div className="metric-label">Total requests</div>
+                    <div className="metric-value">{totalTasks}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Pending</div>
+                    <div className="metric-value">{pendingCount}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">In progress</div>
+                    <div className="metric-value">{inProgressCount}</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-label">Completed</div>
+                    <div className="metric-value">{completedCount}</div>
+                  </div>
+                </div>
+                <div className="dashboard-chart">
+                  <div className="section-title">By priority</div>
+                  <div className="bar-section">
+                    {['High', 'Medium', 'Low'].map((p) => {
+                      const value = priorityCounts[p] || 0;
+                      const width = (value / maxPriorityValue) * 100;
+                      return (
+                        <div className="bar-row" key={p}>
+                          <span className="bar-label">{p}</span>
+                          <div className="bar-track">
+                            <div className="bar-fill" style={{ width: `${width}%` }} />
+                          </div>
+                          <span className="bar-count">{value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="dashboard-chart">
+                  <div className="section-title">By status</div>
+                  <div className="bar-section">
+                    {Object.entries(statusCounts).map(([status, value]) => {
+                      const width = (value / maxStatusValue) * 100;
+                      return (
+                        <div className="bar-row" key={status}>
+                          <span className="bar-label">{status}</span>
+                          <div className="bar-track">
+                            <div
+                              className="bar-fill bar-fill-secondary"
+                              style={{ width: `${width}%` }}
+                            />
+                          </div>
+                          <span className="bar-count">{value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="dashboard-chart">
+                  <div className="section-title">Top technicians</div>
+                  {topTechnicians.length === 0 && (
+                    <div className="text-muted" style={{ fontSize: '12px' }}>
+                      No assignments yet.
+                    </div>
+                  )}
+                  {topTechnicians.map(({ tech, count }) => (
+                    <div className="bar-row" key={tech._id}>
+                      <span className="bar-label">
+                        {tech.name}
+                        {tech.technicianType ? ` (${tech.technicianType})` : ''}
+                      </span>
+                      <div className="bar-track">
+                        <div
+                          className="bar-fill bar-fill-accent"
+                          style={{
+                            width: `${(count / (topTechnicians[0]?.count || 1)) * 100}%`
+                          }}
+                        />
+                      </div>
+                      <span className="bar-count">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="dashboard-row-50">
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">Live trend (6 months)</div>
+                  <div className="line-chart">
+                    <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <polyline
+                        fill="none"
+                        stroke="url(#adminLineGradient)"
+                        strokeWidth="1.8"
+                        points={monthlyTrend
+                          .map((m, idx) => {
+                            const x =
+                              monthlyTrend.length === 1
+                                ? 50
+                                : (idx / (monthlyTrend.length - 1)) * 100;
+                            const y = 35 - (m.count / maxMonthlyValue) * 28;
+                            return `${x},${y}`;
+                          })
+                          .join(' ')}
+                      />
+                      {monthlyTrend.map((m, idx) => {
+                        const x =
+                          monthlyTrend.length === 1
+                            ? 50
+                            : (idx / (monthlyTrend.length - 1)) * 100;
+                        const y = 35 - (m.count / maxMonthlyValue) * 28;
+                        return <circle key={m.key} cx={x} cy={y} r={1.7} className="line-point" />;
+                      })}
+                      <defs>
+                        <linearGradient id="adminLineGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#93c5fd" />
+                          <stop offset="100%" stopColor="#2563eb" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="line-chart-labels">
+                      {monthlyTrend.map((m) => (
+                        <span key={m.key}>{m.label}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">By category (overall)</div>
+                  <div className="bar-section">
+                    {Object.entries(categoryCounts).map(([category, value]) => {
+                      const width = (value / maxCategoryValue) * 100;
+                      return (
+                        <div className="bar-row" key={category}>
+                          <span className="bar-label">{category}</span>
+                          <div className="bar-track">
+                            <div
+                              className="bar-fill bar-fill-secondary"
+                              style={{ width: `${width}%` }}
+                            />
+                          </div>
+                          <span className="bar-count">{value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
