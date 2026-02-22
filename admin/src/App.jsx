@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 const API_BASE = 'http://localhost:5000';
@@ -119,6 +119,8 @@ function AdminDashboard({ onLogout }) {
   const [buildingUrl, setBuildingUrl] = useState('');
   const [qrUrl, setQrUrl] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
+
+  const qrCanvasRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
 
@@ -416,9 +418,14 @@ function AdminDashboard({ onLogout }) {
                           border: '1px solid rgba(148,163,184,0.4)'
                         }}
                       >
-                        <QRCodeCanvas value={qrUrl} size={160} includeMargin={true} />
+                        <QRCodeCanvas
+                          value={qrUrl}
+                          size={160}
+                          includeMargin={true}
+                          ref={qrCanvasRef}
+                        />
                       </div>
-                      <div style={{ marginTop: '12px' }}>
+                      <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
                         <button
                           type="button"
                           className="btn-primary"
@@ -432,6 +439,24 @@ function AdminDashboard({ onLogout }) {
                           }}
                         >
                           {profileSaved ? 'Edit' : 'Submit'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-outline btn-small"
+                          disabled={!qrUrl}
+                          onClick={() => {
+                            const canvas = qrCanvasRef.current;
+                            if (!canvas) return;
+                            const dataUrl = canvas.toDataURL('image/png');
+                            const link = document.createElement('a');
+                            link.href = dataUrl;
+                            link.download = 'building-qr.png';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                        >
+                          Download QR
                         </button>
                       </div>
                     </div>
