@@ -1,12 +1,12 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Admin: create tenant or supervisor (and optionally admin)
+// Admin: create users across all supported roles
 exports.createUser = async (req, res) => {
   try {
     const { name, email, password, phone, role, apartment, buildings, isActive, technicianType } = req.body;
 
-    if (!['tenant', 'supervisor', 'admin', 'technician'].includes(role)) {
+    if (!['tenant', 'supervisor', 'admin', 'technician', 'procurement'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
 
