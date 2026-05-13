@@ -5,6 +5,17 @@ const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 
+// Ensure uploads and uploads/invoices directories exist
+const fs = require('fs');
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+const invoicesDir = path.join(uploadsDir, 'invoices');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(invoicesDir)) {
+  fs.mkdirSync(invoicesDir, { recursive: true });
+}
+
 const app = express();
 
 app.use(cors());
