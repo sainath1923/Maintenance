@@ -142,6 +142,18 @@ function TechnicianDashboard({ onLogout }) {
   const [uploadingInvoiceId, setUploadingInvoiceId] = useState(null);
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'stocks'
+  const [stockEntries, setStockEntries] = useState([]);
+  const [stocksLoading, setStocksLoading] = useState(false);
+  const [stocksError, setStocksError] = useState('');
+  const [tenantUsers, setTenantUsers] = useState([]);
+  const [stockRequestEntry, setStockRequestEntry] = useState(null);
+  const [stockRequestTenantId, setStockRequestTenantId] = useState('');
+  const [stockRequestQuantity, setStockRequestQuantity] = useState('');
+  const [stockRequestComments, setStockRequestComments] = useState('');
+  const [stockRequestSubmitting, setStockRequestSubmitting] = useState(false);
+  const [stockRequestError, setStockRequestError] = useState('');
+  const [stockRequestSuccess, setStockRequestSuccess] = useState('');
 
   const COMMENT_OPTIONS = [
     'Fixed the issue',
@@ -156,7 +168,6 @@ function TechnicianDashboard({ onLogout }) {
 
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
-
   const token = localStorage.getItem('technician_token');
 
   const fetchMyJobs = async () => {
@@ -172,14 +183,122 @@ function TechnicianDashboard({ onLogout }) {
         return;
       }
       setRequests(data);
-    } catch (err) {
+    } catch {
       setError('Network error');
     }
   };
 
+  const fetchStockEntries = async () => {
+    setStocksError('');
+    setStocksLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/entries`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStocksError(data.message || 'Failed to load stock entries');
+        return;
+      }
+      setStockEntries(Array.isArray(data) ? data : []);
+    } catch {
+      setStocksError('Network error while loading stock entries');
+    } finally {
+      setStocksLoading(false);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/tenants`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return;
+      }
+      setTenantUsers(Array.isArray(data) ? data : []);
+    } catch {
+      // keep tenant picker empty on failure
+    }
+  };
+
   useEffect(() => {
-    if (token) fetchMyJobs();
+    if (token) {
+      fetchMyJobs();
+      fetchStockEntries();
+      fetchTenants();
+    }
   }, []);
+
+  const openStockRequestDrawer = (entry) => {
+    setStockRequestEntry(entry);
+    setStockRequestTenantId('');
+    setStockRequestQuantity('');
+    setStockRequestComments('');
+    setStockRequestError('');
+    setStockRequestSuccess('');
+  };
+
+  const closeStockRequestDrawer = () => {
+    setStockRequestEntry(null);
+    setStockRequestTenantId('');
+    setStockRequestQuantity('');
+    setStockRequestComments('');
+    setStockRequestError('');
+    setStockRequestSuccess('');
+  };
+
+  const submitStockRequest = async () => {
+    setStockRequestError('');
+    setStockRequestSuccess('');
+
+    if (!stockRequestEntry?._id) {
+      setStockRequestError('Invalid stock item selected.');
+      return;
+    }
+    if (!stockRequestTenantId) {
+      setStockRequestError('Please select a tenant.');
+      return;
+    }
+
+    const qty = Number(stockRequestQuantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      setStockRequestError('Please enter quantity greater than 0.');
+      return;
+    }
+
+    setStockRequestSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/requests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          stockId: stockRequestEntry._id,
+          quantity: qty,
+          tenantId: stockRequestTenantId,
+          comments: stockRequestComments
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStockRequestError(data.message || 'Failed to submit stock request');
+        return;
+      }
+
+      setStockRequestSuccess('Stock request submitted successfully.');
+      setTimeout(() => {
+        closeStockRequestDrawer();
+      }, 700);
+    } catch {
+      setStockRequestError('Network error while submitting stock request');
+    } finally {
+      setStockRequestSubmitting(false);
+    }
+  };
 
   const updateStatus = async (id) => {
     setError('');
@@ -203,7 +322,7 @@ function TechnicianDashboard({ onLogout }) {
       await fetchMyJobs();
       setInfoMessage('Status and comment saved successfully.');
       setEditingStatusId(null);
-    } catch (err) {
+    } catch {
       setError('Network error');
     }
   };
@@ -229,7 +348,7 @@ function TechnicianDashboard({ onLogout }) {
         return;
       }
       await fetchMyJobs();
-    } catch (err) {
+    } catch {
       setError('Network error');
     } finally {
       setUploadingInvoiceId(null);
@@ -266,115 +385,262 @@ function TechnicianDashboard({ onLogout }) {
         </div>
 
         <div className="app-main">
-          <div className="card">
-            <div className="card-header-row">
-              <div className="card-title">My tickets</div>
-              <span className="chip">{requests.length} items</span>
-            </div>
-            {error && <p className="text-danger">{error}</p>}
-            {infoMessage && <p className="text-success">{infoMessage}</p>}
-            <ul className="list-scroll">
-              {requests.map((r) => (
-                <li key={r._id}>
-                  <div className="ticket-row">
-                    <div className="ticket-main">
-                      <div className="ticket-header-row">
-                        <div className="ticket-title">{r.title}</div>
-                        <span
-                          className={
-                            'status-pill ' +
-                            `status-${(r.status || '')
-                              .toLowerCase()
-                              .replace(/\s+/g, '-')}`
-                          }
-                        >
-                          {r.status}
-                        </span>
-                      </div>
-                      <div className="ticket-subline">
-                        <span className="ticket-label">Flat</span> {r.flatNumber || '-'}, {r.block || 'No block'} ·{' '}
-                        <span className="ticket-label">Priority:</span> {r.priority}
-                      </div>
-                      <div className="ticket-subline">
-                        <span className="ticket-label">Type:</span> {r.requestType || '-'} ·{' '}
-                        <span className="ticket-label">Category:</span> {r.maintenanceCategory || '-'}
-                      </div>
-                      {editingStatusId === r._id && (
-                        <div style={{ marginTop: '4px' }}>
-                          <div className="field" style={{ marginBottom: '4px' }}>
-                            <label>Status</label>
-                            <select
-                              value={statusById[r._id] || r.status}
-                              onChange={(e) =>
-                                setStatusById((prev) => ({ ...prev, [r._id]: e.target.value }))
-                              }
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="In Progress">In Progress</option>
-                              <option value="Rejected">Rejected</option>
-                              <option value="Completed">Completed</option>
-                            </select>
-                          </div>
-                          <div className="field" style={{ marginBottom: '4px' }}>
-                            <label>Comment</label>
-                            <select
-                              value={commentById[r._id] || ''}
-                              onChange={(e) =>
-                                setCommentById((prev) => ({ ...prev, [r._id]: e.target.value }))
-                              }
-                            >
-                              <option value="">Select comment</option>
-                              {COMMENT_OPTIONS.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              className="btn-small btn-primary"
-                              type="button"
-                              onClick={() => updateStatus(r._id)}
-                            >
-                              Submit
-                            </button>
-                            <button
-                              className="btn-small btn-outline"
-                              type="button"
-                              onClick={() => setEditingStatusId(null)}
-                            >
-                              Close
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="ticket-actions">
-                      {editingStatusId !== r._id && (
-                        <button
-                          className="btn-small btn-primary"
-                          type="button"
-                          onClick={() => setEditingStatusId(r._id)}
-                        >
-                          Update status
-                        </button>
-                      )}
-                      <button
-                        className="btn-small btn-view"
-                        type="button"
-                        onClick={() => setDrawerRequestId(r._id)}
-                      >
-                        View
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <div className="tabs-row">
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'tickets' ? ' active' : '')}
+              onClick={() => setActiveTab('tickets')}
+            >
+              My Tickets
+            </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'stocks' ? ' active' : '')}
+              onClick={() => setActiveTab('stocks')}
+            >
+              Stocks
+            </button>
           </div>
+
+          {activeTab === 'tickets' && (
+            <div className="card">
+              <div className="card-header-row">
+                <div className="card-title">My tickets</div>
+                <span className="chip">{requests.length} items</span>
+              </div>
+              {error && <p className="text-danger">{error}</p>}
+              {infoMessage && <p className="text-success">{infoMessage}</p>}
+              <ul className="list-scroll">
+                {requests.map((r) => (
+                  <li key={r._id}>
+                    <div className="ticket-row">
+                      <div className="ticket-main">
+                        <div className="ticket-header-row">
+                          <div className="ticket-title">{r.title}</div>
+                          <span
+                            className={
+                              'status-pill ' +
+                              `status-${(r.status || '')
+                                .toLowerCase()
+                                .replace(/\s+/g, '-')}`
+                            }
+                          >
+                            {r.status}
+                          </span>
+                        </div>
+                        <div className="ticket-subline">
+                          <span className="ticket-label">Flat</span> {r.flatNumber || '-'}, {r.block ||
+                            'No block'}{' '}
+                          · <span className="ticket-label">Priority:</span> {r.priority}
+                        </div>
+                        <div className="ticket-subline">
+                          <span className="ticket-label">Type:</span> {r.requestType || '-'} ·{' '}
+                          <span className="ticket-label">Category:</span> {r.maintenanceCategory || '-'}
+                        </div>
+
+                        {editingStatusId === r._id && (
+                          <div style={{ marginTop: '8px' }}>
+                            <div className="field" style={{ marginBottom: '6px' }}>
+                              <label>Status</label>
+                              <select
+                                value={statusById[r._id] || r.status}
+                                onChange={(e) =>
+                                  setStatusById((prev) => ({ ...prev, [r._id]: e.target.value }))
+                                }
+                              >
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Waiting for Parts">Waiting for Parts</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Completed">Completed</option>
+                              </select>
+                            </div>
+                            <div className="field" style={{ marginBottom: '6px' }}>
+                              <label>Comment</label>
+                              <select
+                                value={commentById[r._id] || ''}
+                                onChange={(e) =>
+                                  setCommentById((prev) => ({ ...prev, [r._id]: e.target.value }))
+                                }
+                              >
+                                <option value="">Select comment</option>
+                                {COMMENT_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                className="btn-small btn-primary"
+                                type="button"
+                                onClick={async () => {
+                                  await updateStatus(r._id);
+                                  setEditingStatusId(null);
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="btn-small btn-outline"
+                                type="button"
+                                onClick={() => setEditingStatusId(null)}
+                              >
+                                Close
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="ticket-actions">
+                        {editingStatusId !== r._id && (
+                          <button
+                            className="btn-small btn-primary"
+                            type="button"
+                            onClick={() => setEditingStatusId(r._id)}
+                          >
+                            Update status
+                          </button>
+                        )}
+                        <button
+                          className="btn-small btn-view"
+                          type="button"
+                          onClick={() => setDrawerRequestId(r._id)}
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {activeTab === 'stocks' && (
+            <div className="card">
+              <div className="card-header-row">
+                <div className="card-title">Stocks</div>
+                <span className="chip">Stock list</span>
+              </div>
+              {stocksError && <p className="text-danger">{stocksError}</p>}
+              <div className="stocks-table-wrap">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Item</th>
+                      <th>Status</th>
+                      <th>Quantity</th>
+                      <th>Updated On</th>
+                      <th>Request</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockEntries.length === 0 && !stocksLoading && (
+                      <tr>
+                        <td colSpan="6" className="stocks-empty-row">
+                          No stock entries available.
+                        </td>
+                      </tr>
+                    )}
+                    {stockEntries.map((entry) => (
+                      <tr key={entry._id || `${entry.category}-${entry.item}`}>
+                        <td>{entry.category}</td>
+                        <td>{entry.item}</td>
+                        <td>{entry.isAvailable ? 'Available' : 'Not Available'}</td>
+                        <td>{entry.isAvailable ? entry.quantity : '-'}</td>
+                        <td>{entry.updatedOn ? new Date(entry.updatedOn).toLocaleDateString() : '-'}</td>
+                        <td>
+                          <button
+                            className="btn-small btn-view"
+                            type="button"
+                            onClick={() => openStockRequestDrawer(entry)}
+                          >
+                            Request
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {stockRequestEntry && (
+        <div className="drawer-backdrop" onClick={closeStockRequestDrawer}>
+          <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="drawer-header">
+              <div>
+                <div className="drawer-title">Stock Request</div>
+                <div className="text-muted">
+                  {stockRequestEntry.category} / {stockRequestEntry.item}
+                </div>
+              </div>
+              <button className="btn-small btn-outline" type="button" onClick={closeStockRequestDrawer}>
+                Close
+              </button>
+            </div>
+            <div className="drawer-body">
+              <div>
+                <div className="field">
+                  <label>Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={stockRequestQuantity}
+                    onChange={(e) => setStockRequestQuantity(e.target.value)}
+                    placeholder="Enter required quantity"
+                  />
+                </div>
+                <div className="field" style={{ marginTop: '10px' }}>
+                  <label>Tenant</label>
+                  <select
+                    value={stockRequestTenantId}
+                    onChange={(e) => setStockRequestTenantId(e.target.value)}
+                  >
+                    <option value="">Select tenant</option>
+                    {tenantUsers.map((tenant) => (
+                      <option key={tenant._id} value={tenant._id}>
+                        {tenant.flatNumber
+                          ? `Flat ${tenant.flatNumber}${tenant.block ? `, Block ${tenant.block}` : ''}`
+                          : 'Flat not available'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field" style={{ marginTop: '10px' }}>
+                  <label>Comments about damaged product</label>
+                  <textarea
+                    rows={4}
+                    value={stockRequestComments}
+                    onChange={(e) => setStockRequestComments(e.target.value)}
+                    placeholder="Describe the product damage"
+                  />
+                </div>
+                {stockRequestError && <p className="text-danger">{stockRequestError}</p>}
+                {stockRequestSuccess && <p className="text-success">{stockRequestSuccess}</p>}
+                <div style={{ marginTop: '10px' }}>
+                  <button
+                    className="btn-primary"
+                    type="button"
+                    onClick={submitStockRequest}
+                    disabled={stockRequestSubmitting}
+                  >
+                    {stockRequestSubmitting ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {drawerRequestId && (
         <div className="drawer-backdrop" onClick={() => setDrawerRequestId(null)}>
           <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
@@ -465,7 +731,7 @@ function TechnicianDashboard({ onLogout }) {
                           <span className="text-muted">No invoice uploaded</span>
                         )}
                         <label className="btn-small btn-outline file-upload-button">
-                          {uploadingInvoiceId === r._id ? 'Uploading…' : 'Upload invoice'}
+                          {uploadingInvoiceId === r._id ? 'Uploading...' : 'Upload invoice'}
                           <input
                             type="file"
                             accept="image/*,application/pdf"
