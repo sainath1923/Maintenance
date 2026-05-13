@@ -6,6 +6,16 @@ const API_BASE =
     ? 'http://localhost:5000'
     : '');
 
+async function parseApiResponse(res) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
 
@@ -149,7 +159,12 @@ function SupervisorDashboard({ onLogout }) {
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'dashboard'
+  const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'dashboard' | 'stocks' | 'item-requests'
+  const [stocksLoading, setStocksLoading] = useState(false);
+  const [stocksError, setStocksError] = useState('');
+  const [stockEntries, setStockEntries] = useState([]);
+  const [stockRequests, setStockRequests] = useState([]);
+  const [stockRequestsError, setStockRequestsError] = useState('');
 
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
@@ -194,12 +209,60 @@ function SupervisorDashboard({ onLogout }) {
     return technicians.filter((t) => t.technicianType === type);
   };
 
+  const fetchStockEntries = async () => {
+    setStocksError('');
+    setStocksLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/entries`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await parseApiResponse(res);
+      if (!res.ok) {
+        setStocksError(data.message || 'Failed to load stock entries');
+        return;
+      }
+      setStockEntries(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setStocksError('Network error while loading stock entries');
+    } finally {
+      setStocksLoading(false);
+    }
+  };
+
+  const fetchStockRequests = async () => {
+    setStockRequestsError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/requests`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await parseApiResponse(res);
+      if (!res.ok) {
+        setStockRequestsError(data.message || 'Failed to load item requests');
+        return;
+      }
+      setStockRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setStockRequestsError('Network error while loading item requests');
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchAssigned();
       fetchTechnicians();
+      fetchStockEntries();
+      fetchStockRequests();
     }
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      fetchStockRequests();
+      fetchStockEntries();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const updateStatus = async (id) => {
     setError('');
@@ -329,7 +392,6 @@ function SupervisorDashboard({ onLogout }) {
   });
 
   const maxMonthlyValue = Math.max(1, ...monthlyTrend.map((m) => m.count));
-
   return (
     <div className="app-shell">
       <div className="app-card">
@@ -374,6 +436,23 @@ function SupervisorDashboard({ onLogout }) {
               onClick={() => setActiveTab('dashboard')}
             >
               Dashboard
+            </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'stocks' ? ' active' : '')}
+              onClick={() => setActiveTab('stocks')}
+            >
+              Stocks
+            </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'item-requests' ? ' active' : '')}
+              onClick={() => {
+                setActiveTab('item-requests');
+                fetchStockRequests();
+              }}
+            >
+              Item Requests
             </button>
           </div>
 
@@ -647,6 +726,102 @@ function SupervisorDashboard({ onLogout }) {
                     })}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'stocks' && (
+            <div className="card">
+              <div className="card-header-row">
+                <div className="card-title">Stocks</div>
+                <span className="chip">Stock availability</span>
+              </div>
+              {stocksError && <p className="text-danger">{stocksError}</p>}
+              <div className="stocks-table-wrap">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Item</th>
+                      <th>Status</th>
+                      <th>Quantity</th>
+                      <th>Updated On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockEntries.length === 0 && !stocksLoading && (
+                      <tr>
+                        <td colSpan="5" className="stocks-empty-row">
+                          No stock entries submitted yet.
+                        </td>
+                      </tr>
+                    )}
+                    {stockEntries.map((entry) => (
+                      <tr key={entry._id || `${entry.category}-${entry.item}`}>
+                        <td>{entry.category}</td>
+                        <td>{entry.item}</td>
+                        <td>{entry.isAvailable ? 'Available' : 'Not Available'}</td>
+                        <td>{entry.isAvailable ? entry.quantity : '-'}</td>
+                        <td>
+                          {entry.updatedOn
+                            ? new Date(entry.updatedOn).toLocaleDateString()
+                            : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'item-requests' && (
+            <div className="card">
+              <div className="card-header-row">
+                <div className="card-title">Technician Item Requests</div>
+                <span className="chip">{stockRequests.length} requests</span>
+              </div>
+              {stockRequestsError && <p className="text-danger">{stockRequestsError}</p>}
+              <div className="stocks-table-wrap">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Item</th>
+                      <th>Quantity</th>
+                      <th>Tenant</th>
+                      <th>Requested By</th>
+                      <th>Comments</th>
+                      <th>Status</th>
+                      <th>Approved On</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockRequests.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="stocks-empty-row">
+                          No item requests raised yet.
+                        </td>
+                      </tr>
+                    )}
+                    {stockRequests.map((request) => (
+                      <tr key={request._id}>
+                        <td>{request.category}</td>
+                        <td>{request.item}</td>
+                        <td>{request.quantity}</td>
+                        <td>
+                          {request.tenantFlatNumber
+                            ? `Flat ${request.tenantFlatNumber}${request.tenantBlock ? `, Block ${request.tenantBlock}` : ''}`
+                            : '-'}
+                        </td>
+                        <td>{request.requestedBy?.name || '-'}</td>
+                        <td>{request.comments || '-'}</td>
+                        <td>{request.status}</td>
+                        <td>{request.approvedAt ? new Date(request.approvedAt).toLocaleString() : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
