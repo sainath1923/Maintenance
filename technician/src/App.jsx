@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { notification } from 'antd';
+import 'antd/dist/reset.css';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -8,6 +10,7 @@ const API_BASE =
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
+  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -15,7 +18,8 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl);
+          setLogo(data.logoUrl + '?v=' + Date.now());
+          setLogoVersion(Date.now());
         }
       } catch {
         // ignore logo errors
@@ -289,7 +293,13 @@ function TechnicianDashboard({ onLogout }) {
         return;
       }
 
-      setStockRequestSuccess('Stock request submitted successfully.');
+      notification.success({
+        message: 'Stock Request Submitted',
+        description: 'Stock request submitted successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+      setStockRequestSuccess('');
       setTimeout(() => {
         closeStockRequestDrawer();
       }, 700);
@@ -320,7 +330,13 @@ function TechnicianDashboard({ onLogout }) {
         return;
       }
       await fetchMyJobs();
-      setInfoMessage('Status and comment saved successfully.');
+      notification.success({
+        message: 'Status Updated',
+        description: 'Status and comment saved successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+      setInfoMessage('');
       setEditingStatusId(null);
     } catch {
       setError('Network error');
