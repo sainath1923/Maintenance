@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { notification } from 'antd';
+import 'antd/dist/reset.css';
 import { QRCodeCanvas } from 'qrcode.react';
 
 const API_BASE =
@@ -9,6 +11,7 @@ const API_BASE =
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
+  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -16,7 +19,9 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl);
+          // Add cache-busting query string
+          setLogo(data.logoUrl + '?v=' + Date.now());
+          setLogoVersion(Date.now());
         }
       } catch {
         // ignore logo errors
@@ -234,6 +239,12 @@ function AdminDashboard({ onLogout }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to save company profile');
       setProfileSaved(true);
+      notification.success({
+        message: 'Profile Saved',
+        description: 'Company profile saved successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
     } catch (err) {
       setError(err.message);
       throw err;
@@ -285,6 +296,12 @@ function AdminDashboard({ onLogout }) {
       setNewUserPassword('');
       setNewUserPhone('');
       setNewUserTechnicianType('Plumber');
+      notification.success({
+        message: 'User Created',
+        description: 'New user created successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
       fetchUsers();
     } catch (err) {
       setError(err.message);
