@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { notification } from 'antd';
+import 'antd/dist/reset.css';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -18,6 +20,7 @@ async function parseApiResponse(res) {
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
+  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -25,7 +28,8 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl);
+          setLogo(data.logoUrl + '?v=' + Date.now());
+          setLogoVersion(Date.now());
         }
       } catch {
         // ignore logo errors
@@ -309,7 +313,13 @@ function SupervisorDashboard({ onLogout }) {
       }
       // simple visual feedback and refresh list so assignment is reflected
       setAssignment((prev) => ({ ...prev, [id]: '' }));
-      setInfoMessage('Ticket assigned to technician successfully.');
+      notification.success({
+        message: 'Ticket Assigned',
+        description: 'Ticket assigned to technician successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+      setInfoMessage('');
       await fetchAssigned();
     } catch (err) {
       setError('Network error');
