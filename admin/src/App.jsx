@@ -218,7 +218,7 @@ function AdminDashboard({ onLogout }) {
 
   const loadCompanyProfile = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/company-profile`, {
+      const res = await fetch(`${API_BASE}/api/company-profile?cb=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
