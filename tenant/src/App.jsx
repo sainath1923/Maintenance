@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { notification } from 'antd';
+import 'antd/dist/reset.css';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -8,6 +10,7 @@ const API_BASE =
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
+  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -15,7 +18,8 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl);
+          setLogo(data.logoUrl + '?v=' + Date.now());
+          setLogoVersion(Date.now());
         }
       } catch {
         // ignore logo errors
@@ -144,6 +148,7 @@ function TenantDashboard({ onLogout }) {
   const [mobileNumber, setMobileNumber] = useState('');
   const [preferredTime, setPreferredTime] = useState('Any time');
   const [error, setError] = useState('');
+  // Remove local success state, use antd notification instead
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastSnapshot, setLastSnapshot] = useState(null);
   const [activeTab, setActiveTab] = useState('raise'); // 'raise' | 'view'
@@ -234,6 +239,12 @@ function TenantDashboard({ onLogout }) {
       }
       setTitle('');
       setDescription('');
+      notification.success({
+        message: 'Request Submitted',
+        description: 'Your request has been submitted successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
       fetchRequests();
     } catch (err) {
       setError('Network error');
@@ -291,14 +302,20 @@ function TenantDashboard({ onLogout }) {
             <button
               type="button"
               className={"tab-button" + (activeTab === 'raise' ? ' active' : '')}
-              onClick={() => setActiveTab('raise')}
+              onClick={() => {
+                setActiveTab('raise');
+                setError('');
+              }}
             >
               Raise request
             </button>
             <button
               type="button"
               className={"tab-button" + (activeTab === 'view' ? ' active' : '')}
-              onClick={() => setActiveTab('view')}
+              onClick={() => {
+                setActiveTab('view');
+                setError('');
+              }}
             >
               View requests
             </button>
