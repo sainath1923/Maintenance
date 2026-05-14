@@ -2,6 +2,7 @@ const CompanyProfile = require('../models/CompanyProfile');
 
 exports.getProfile = async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const profile = await CompanyProfile.findOne({});
     if (!profile) {
       return res.json({
