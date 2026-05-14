@@ -582,6 +582,28 @@ function AdminDashboard({ onLogout }) {
                     </div>
                   )}
 
+                  <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={async () => {
+                        if (!isEditingProfile) {
+                          setIsEditingProfile(true);
+                          return;
+                        }
+                        try {
+                          await saveCompanyProfile();
+                          await loadCompanyProfile();
+                          setIsEditingProfile(false);
+                        } catch {
+                          // error already handled
+                        }
+                      }}
+                    >
+                      {isEditingProfile ? 'Save Profile' : 'Edit Profile'}
+                    </button>
+                  </div>
+
                   {qrUrl && (
                     <div style={{ marginTop: '16px', textAlign: 'center' }}>
                       <div className="section-title">Scan for building location</div>
@@ -603,24 +625,6 @@ function AdminDashboard({ onLogout }) {
                         />
                       </div>
                       <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn-primary"
-                          onClick={async () => {
-                            if (!isEditingProfile) {
-                              setIsEditingProfile(true);
-                              return;
-                            }
-                            try {
-                              await saveCompanyProfile();
-                              setIsEditingProfile(false);
-                            } catch {
-                              // error already handled
-                            }
-                          }}
-                        >
-                          {isEditingProfile ? 'Save' : 'Edit'}
-                        </button>
                         <button
                           type="button"
                           className="btn-outline btn-small"
