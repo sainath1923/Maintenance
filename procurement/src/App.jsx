@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { notification } from 'antd';
+import 'antd/dist/reset.css';
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -8,6 +10,7 @@ const API_BASE =
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
+  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -15,7 +18,8 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl);
+          setLogo(data.logoUrl + '?v=' + Date.now());
+          setLogoVersion(Date.now());
         }
       } catch {
         // ignore logo errors
@@ -362,7 +366,13 @@ function ProcurementDashboard({ onLogout }) {
         return;
       }
 
-      setInfoMessage(editingEntryId ? 'Stock item updated successfully.' : 'Stock item saved successfully.');
+      notification.success({
+        message: editingEntryId ? 'Stock Item Updated' : 'Stock Item Saved',
+        description: editingEntryId ? 'Stock item updated successfully.' : 'Stock item saved successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+      setInfoMessage('');
       resetStockForm();
       await fetchEntries();
     } catch {
@@ -384,7 +394,13 @@ function ProcurementDashboard({ onLogout }) {
         return;
       }
 
-      setInfoMessage('Request approved successfully.');
+      notification.success({
+        message: 'Request Approved',
+        description: 'Request approved successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+      setInfoMessage('');
       await Promise.all([fetchRequests(), fetchEntries()]);
     } catch {
       setError('Network error while approving request');
