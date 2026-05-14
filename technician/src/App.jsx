@@ -14,7 +14,7 @@ function useCompanyLogo() {
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/company-profile`);
+        const res = await fetch(`${API_BASE}/api/company-profile?cb=${Date.now()}`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
           const url = data.logoUrl;
