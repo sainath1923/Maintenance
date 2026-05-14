@@ -10,7 +10,6 @@ const API_BASE =
 
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
-  const [logoVersion, setLogoVersion] = useState(Date.now());
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -18,14 +17,32 @@ function useCompanyLogo() {
         const res = await fetch(`${API_BASE}/api/company-profile`);
         const data = await res.json();
         if (res.ok && data.logoUrl) {
-          setLogo(data.logoUrl + '?v=' + Date.now());
-          setLogoVersion(Date.now());
+          const url = data.logoUrl;
+          if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/')) {
+            const sep = url.includes('?') ? '&' : '?';
+            setLogo(`${url}${sep}cb=${Date.now()}`);
+          } else {
+            setLogo(url);
+          }
         }
       } catch {
         // ignore logo errors
       }
     };
+
+    const onFocus = () => loadLogo();
+    const onVisibility = () => { if (document.visibilityState === 'visible') loadLogo(); };
+
     loadLogo();
+    const timer = setInterval(loadLogo, 30000);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   return logo;
