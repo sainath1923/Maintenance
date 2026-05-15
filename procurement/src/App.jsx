@@ -284,7 +284,17 @@ function ProcurementDashboard({ onLogout }) {
     const res = await fetch(`${API_BASE}/api/stocks/catalog`, { headers });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to load stock catalog');
-    setStockItemsByCategory(data.itemsByCategory || {});
+    // Ensure 'paint' category with specified items exists
+    const itemsByCategory = { ...(data.itemsByCategory || {}) };
+    if (!itemsByCategory.paint) {
+      itemsByCategory.paint = ['white color 10lts', 'brown color 10lts', 'grey color 10lts'];
+    } else {
+      // Ensure all required paint colors are present
+      const paintItems = new Set(itemsByCategory.paint);
+      ['white color 10lts', 'brown color 10lts', 'grey color 10lts'].forEach((color) => paintItems.add(color));
+      itemsByCategory.paint = Array.from(paintItems);
+    }
+    setStockItemsByCategory(itemsByCategory);
   };
 
   const fetchEntries = async () => {
