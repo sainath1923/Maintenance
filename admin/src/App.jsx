@@ -121,7 +121,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Secure access to properties and user management</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <div className="app-badge">System Admin</div>
         </div>
         <div className="app-main">
@@ -427,9 +427,9 @@ function AdminDashboard({ onLogout }) {
               <div className="app-subtitle">User access and maintenance overview</div>
             </div>
           </div>
-          {headerBuildingName && (
+          {/* {headerBuildingName && (
             <div className="header-building-name">{headerBuildingName}</div>
-          )}
+          )} */}
           <button
             className="btn-outline btn-small"
             onClick={() => {
