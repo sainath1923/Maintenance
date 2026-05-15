@@ -281,7 +281,7 @@ function TenantDashboard({ onLogout }) {
               />
             )}
             <div>
-              <div className="app-title">Tenant Dashboard</div>
+              <div className="app-title">Tenant Portal</div>
               <div className="app-subtitle">Create new requests and review your history</div>
             </div>
           </div>
