@@ -155,6 +155,7 @@ function Login({ onLoggedIn }) {
 
 function TechnicianDashboard({ onLogout }) {
   const [requests, setRequests] = useState([]);
+  const [raisedRequests, setRaisedRequests] = useState([]);
   const [statusById, setStatusById] = useState({});
   const [commentById, setCommentById] = useState({});
   const [editingStatusId, setEditingStatusId] = useState(null);
@@ -163,7 +164,30 @@ function TechnicianDashboard({ onLogout }) {
   const [uploadingInvoiceId, setUploadingInvoiceId] = useState(null);
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'stocks'
+  const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'stocks' | 'raised'
+  const [raisedError, setRaisedError] = useState('');
+  // Fetch requests raised by this technician (as tenant)
+  const fetchRaisedRequests = async () => {
+    setRaisedError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/requests/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('technician_token');
+        window.location.reload();
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        setRaisedError(data.message || 'Failed to load raised requests');
+        return;
+      }
+      setRaisedRequests(Array.isArray(data) ? data : []);
+    } catch {
+      setRaisedError('Network error');
+    }
+  };
   const [stockEntries, setStockEntries] = useState([]);
   const [stocksLoading, setStocksLoading] = useState(false);
   const [stocksError, setStocksError] = useState('');
@@ -249,6 +273,7 @@ function TechnicianDashboard({ onLogout }) {
       fetchMyJobs();
       fetchStockEntries();
       fetchTenants();
+      fetchRaisedRequests();
     }
   }, []);
 
@@ -433,7 +458,67 @@ function TechnicianDashboard({ onLogout }) {
             >
               Stocks
             </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'raised' ? ' active' : '')}
+              onClick={() => setActiveTab('raised')}
+            >
+              Requests Raised
+            </button>
           </div>
+          {activeTab === 'raised' && (
+            <div className="card">
+              <div className="card-header-row">
+                <div className="card-title">Requests Raised by Me</div>
+                <span className="chip">{raisedRequests.length} items</span>
+              </div>
+              {raisedError && <p className="text-danger">{raisedError}</p>}
+              <div className="stocks-table-wrap">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Flat</th>
+                      <th>Category</th>
+                      <th>Priority</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {raisedRequests.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="stocks-empty-row">
+                          No requests raised yet.
+                        </td>
+                      </tr>
+                    )}
+                    {raisedRequests.map((r) => (
+                      <tr key={r._id}>
+                        <td>{r.title}</td>
+                        <td>{r.flatNumber || '-'}{r.block ? `, ${r.block}` : ''}</td>
+                        <td>{r.maintenanceCategory || '-'}</td>
+                        <td>{r.priority}</td>
+                        <td>
+                          <span
+                            className={
+                              'status-pill ' +
+                              `status-${(r.status || '')
+                                .toLowerCase()
+                                .replace(/\s+/g, '-')}`
+                            }
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {activeTab === 'tickets' && (
             <div className="card">
