@@ -162,6 +162,7 @@ function AdminDashboard({ onLogout }) {
 
   const [activeTab, setActiveTab] = useState('company'); // 'company' | 'add' | 'team' | 'requests' | 'dashboard'
 
+
   const [companyLogo, setCompanyLogo] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [buildingName, setBuildingName] = useState('');
@@ -171,7 +172,13 @@ function AdminDashboard({ onLogout }) {
   const [profileSaved, setProfileSaved] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-  const qrCanvasRef = useRef(null);
+  // Fix: define QR code visibility state here
+  const [showBuildingQR, setShowBuildingQR] = useState(true);
+  const [showMaintenanceQR, setShowMaintenanceQR] = useState(true);
+
+  // Separate refs for each QR code
+  const buildingQrRef = useRef(null);
+  const maintenanceQrRef = useRef(null);
 
   const token = localStorage.getItem('admin_token');
 
@@ -552,37 +559,7 @@ function AdminDashboard({ onLogout }) {
                         disabled={!isEditingProfile}
                       />
                     </div>
-                    <button
-                      type="button"
-                      className="btn-primary"
-                      onClick={() => {
-                        if (!buildingUrl.trim()) return;
-                        setQrUrl(buildingUrl.trim());
-                      }}
-                      disabled={!buildingUrl.trim()}
-                    >
-                      Generate QR code
-                    </button>
-                  </form>
-
-                  {companyLogo && (
-                    <div
-                      style={{
-                        marginTop: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <img
-                        src={companyLogo}
-                        alt="Company logo"
-                        style={{ height: '75px', objectFit: 'contain' }}
-                      />
-                    </div>
-                  )}
-
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
                     <button
                       type="button"
                       className="btn-primary"
@@ -603,49 +580,135 @@ function AdminDashboard({ onLogout }) {
                       {isEditingProfile ? 'Save Profile' : 'Edit Profile'}
                     </button>
                   </div>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => {
+                        if (!buildingUrl.trim()) return;
+                        setShowBuildingQR(true);
+                        setShowMaintenanceQR(false);
+                      }}
+                      disabled={!buildingUrl.trim()}
+                    >
+                      Show Building QR code
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      style={{ marginLeft: '8px' }}
+                      onClick={() => {
+                        setShowMaintenanceQR(true);
+                        setShowBuildingQR(false);
+                      }}
+                    >
+                      Show Maintenance Request QR
+                    </button>
+                  </form>
 
-                  {qrUrl && (
-                    <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                      <div className="section-title">Scan for building location</div>
-                      <div
-                        style={{
-                          marginTop: '8px',
-                          display: 'inline-block',
-                          padding: '8px',
-                          background: '#f9fafb',
-                          borderRadius: '16px',
-                          border: '1px solid rgba(148,163,184,0.4)'
-                        }}
-                      >
-                        <QRCodeCanvas
-                          value={qrUrl}
-                          size={160}
-                          includeMargin={true}
-                          ref={qrCanvasRef}
-                        />
-                      </div>
-                      <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn-outline btn-small"
-                          disabled={!qrUrl}
-                          onClick={() => {
-                            const canvas = qrCanvasRef.current;
-                            if (!canvas) return;
-                            const dataUrl = canvas.toDataURL('image/png');
-                            const link = document.createElement('a');
-                            link.href = dataUrl;
-                            link.download = 'building-qr.png';
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          }}
-                        >
-                          Download QR
-                        </button>
-                      </div>
+                  {companyLogo && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <img
+                        src={companyLogo}
+                        alt="Company logo"
+                        style={{ height: '75px', objectFit: 'contain' }}
+                      />
                     </div>
                   )}
+
+              
+
+                  <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '32px' }}>
+                    {showBuildingQR && buildingUrl.trim() && (
+                      <div style={{ textAlign: 'center' }}>
+                        <div className="section-title">Building location</div>
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            display: 'inline-block',
+                            padding: '8px',
+                            background: '#f9fafb',
+                            borderRadius: '16px',
+                            border: '1px solid rgba(148,163,184,0.4)'
+                          }}
+                        >
+                          <QRCodeCanvas
+                            value={buildingUrl.trim()}
+                            size={160}
+                            includeMargin={true}
+                            ref={buildingQrRef}
+                          />
+                        </div>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            className="btn-outline btn-small"
+                            onClick={() => {
+                              // The QRCodeCanvas renders a canvas element as its first child
+                              const canvas = buildingQrRef.current?.querySelector('canvas') || buildingQrRef.current;
+                              if (!canvas) return;
+                              const dataUrl = canvas.toDataURL('image/png');
+                              const link = document.createElement('a');
+                              link.href = dataUrl;
+                              link.download = 'building-qr.png';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                          >
+                            Download QR
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {showMaintenanceQR && (
+                      <div style={{ textAlign: 'center' }}>
+                        <div className="section-title">Maintenance Request</div>
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            display: 'inline-block',
+                            padding: '8px',
+                            background: '#f9fafb',
+                            borderRadius: '16px',
+                            border: '1px solid rgba(148,163,184,0.4)'
+                          }}
+                        >
+                          <QRCodeCanvas
+                            value={'https://www.tenant.maintenance.honouredtech.com/'}
+                            size={160}
+                            includeMargin={true}
+                            ref={maintenanceQrRef}
+                          />
+                        </div>
+                        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            className="btn-outline btn-small"
+                            onClick={() => {
+                              const canvas = maintenanceQrRef.current?.querySelector('canvas') || maintenanceQrRef.current;
+                              if (!canvas) return;
+                              const dataUrl = canvas.toDataURL('image/png');
+                              const link = document.createElement('a');
+                              link.href = dataUrl;
+                              link.download = 'maintenance-request-qr.png';
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                          >
+                            Download QR
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
             </div>
           )}
