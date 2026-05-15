@@ -646,7 +646,7 @@ function ProcurementDashboard({ onLogout }) {
               />
             )}
             <div>
-              <div className="app-title">Procurement Dashboard</div>
+              <div className="app-title">Procurement Portal</div>
               <div className="app-subtitle">Add stock items and process technician requests</div>
             </div>
           </div>
