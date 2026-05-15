@@ -119,7 +119,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Login to raise and track maintenance requests</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <div className="app-badge">Residential Maintenance</div>
         </div>
         <div className="app-main">
@@ -285,7 +285,7 @@ function TenantDashboard({ onLogout }) {
               <div className="app-subtitle">Create new requests and review your history</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               type="button"
