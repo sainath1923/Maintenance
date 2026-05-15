@@ -423,7 +423,7 @@ function AdminDashboard({ onLogout }) {
               />
             )}
             <div>
-              <div className="app-title">Admin Dashboard</div>
+              <div className="app-title">Admin Portal</div>
               <div className="app-subtitle">User access and maintenance overview</div>
             </div>
           </div>
