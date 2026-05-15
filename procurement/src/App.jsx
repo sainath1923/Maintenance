@@ -119,7 +119,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Manage stock and process technician requests</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <div className="app-badge">Procurement</div>
         </div>
         <div className="app-main">
@@ -650,7 +650,7 @@ function ProcurementDashboard({ onLogout }) {
               <div className="app-subtitle">Add stock items and process technician requests</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <button
             className="btn-outline btn-small"
             onClick={() => {
