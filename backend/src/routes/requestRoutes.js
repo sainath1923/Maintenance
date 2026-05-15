@@ -26,7 +26,7 @@ const upload = multer({ storage });
 
 // Tenant
 router.post('/', auth(['tenant']), ctrl.createRequest);
-router.get('/me', auth(['tenant']), ctrl.getMyRequests);
+router.get('/me', auth(['tenant', 'technician']), ctrl.getMyRequests);
 
 // Supervisor
 router.get('/assigned', auth(['supervisor']), ctrl.getAssignedRequests);
