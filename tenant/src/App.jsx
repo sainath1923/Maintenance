@@ -111,7 +111,7 @@ function Login({ onLoggedIn }) {
               <img
                 src={companyLogo}
                 alt="Company logo"
-                style={{ height: '36px', objectFit: 'contain' }}
+                style={{ height: '75px', objectFit: 'contain' }}
               />
             )}
             <div>
@@ -277,7 +277,7 @@ function TenantDashboard({ onLogout }) {
               <img
                 src={companyLogo}
                 alt="Company logo"
-                style={{ height: '36px', objectFit: 'contain' }}
+                style={{ height: '75px', objectFit: 'contain' }}
               />
             )}
             <div>
