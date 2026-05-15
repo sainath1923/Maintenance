@@ -175,6 +175,7 @@ function SupervisorDashboard({ onLogout }) {
     electrician: false,
     plumber: false,
     carpenter: false,
+    painter: false,
     other: false
   });
   const [editingStatusId, setEditingStatusId] = useState(null);
@@ -1025,6 +1026,16 @@ function SupervisorDashboard({ onLogout }) {
                         <div className="checkbox-row">
                           <input
                             type="checkbox"
+                            checked={skillFilters.painter}
+                            onChange={(e) =>
+                              setSkillFilters((prev) => ({ ...prev, painter: e.target.checked }))
+                            }
+                          />
+                          <span>Painter</span>
+                        </div>
+                        <div className="checkbox-row">
+                          <input
+                            type="checkbox"
                             checked={skillFilters.other}
                             onChange={(e) =>
                               setSkillFilters((prev) => ({ ...prev, other: e.target.checked }))
@@ -1045,11 +1056,35 @@ function SupervisorDashboard({ onLogout }) {
                           }
                         >
                           <option value="">Select</option>
-                          {technicians.map((t) => (
-                            <option key={t._id} value={t._id}>
-                              {t.name} {t.technicianType ? `(${t.technicianType})` : ''}
-                            </option>
-                          ))}
+                          {(() => {
+                            // Get selected skill types
+                            const selectedSkills = Object.entries(skillFilters)
+                              .filter(([key, val]) => val)
+                              .map(([key]) => key);
+                            // If none selected, show all
+                            let filtered = technicians;
+                            if (selectedSkills.length > 0) {
+                              filtered = technicians.filter((t) =>
+                                t.technicianType && selectedSkills.some(skill => {
+                                  // Normalize for matching
+                                  const skillMap = {
+                                    ac: 'ac',
+                                    electrician: 'electrician',
+                                    plumber: 'plumber',
+                                    carpenter: 'carpenter',
+                                    painter: 'painter',
+                                    other: 'other'
+                                  };
+                                  return t.technicianType.toLowerCase() === skillMap[skill];
+                                })
+                              );
+                            }
+                            return filtered.map((t) => (
+                              <option key={t._id} value={t._id}>
+                                {t.name} {t.technicianType ? `(${t.technicianType})` : ''}
+                              </option>
+                            ));
+                          })()}
                         </select>
                       </div>
                       <div style={{ marginTop: '8px' }}>
