@@ -432,7 +432,7 @@ function SupervisorDashboard({ onLogout }) {
               />
             )}
             <div>
-              <div className="app-title">Supervisor Dashboard</div>
+              <div className="app-title">Supervisor Portal</div>
               <div className="app-subtitle">Work through assigned maintenance tasks</div>
             </div>
           </div>
