@@ -115,7 +115,7 @@ function Login({ onLoggedIn }) {
               />
             )}
             <div>
-              <div className="app-title">Technician Console</div>
+              <div className="app-title">Technician Portal</div>
               <div className="app-subtitle">Sign in to work on assigned tickets</div>
             </div>
           </div>
@@ -426,7 +426,7 @@ function TechnicianDashboard({ onLogout }) {
               />
             )}
             <div>
-              <div className="app-title">Technician Dashboard</div>
+              <div className="app-title">Technician Portal</div>
               <div className="app-subtitle">Work through your assigned tickets</div>
             </div>
           </div>
