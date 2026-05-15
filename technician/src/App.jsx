@@ -119,7 +119,7 @@ function Login({ onLoggedIn }) {
               <div className="app-subtitle">Sign in to work on assigned tickets</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <div className="app-badge">Field Operations</div>
         </div>
         <div className="app-main">
@@ -430,7 +430,7 @@ function TechnicianDashboard({ onLogout }) {
               <div className="app-subtitle">Work through your assigned tickets</div>
             </div>
           </div>
-          {buildingName && <div className="header-building-name">{buildingName}</div>}
+          {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
           <button
             className="btn-outline btn-small"
             onClick={() => {
