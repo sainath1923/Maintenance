@@ -289,6 +289,11 @@ function ProcurementDashboard({ onLogout }) {
 
   const fetchEntries = async () => {
     const res = await fetch(`${API_BASE}/api/stocks/entries`, { headers });
+    if (res.status === 401) {
+      localStorage.removeItem('procurement_token');
+      window.location.reload();
+      return;
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to load stock entries');
     setStockEntries(Array.isArray(data) ? data : []);
@@ -296,6 +301,11 @@ function ProcurementDashboard({ onLogout }) {
 
   const fetchRequests = async () => {
     const res = await fetch(`${API_BASE}/api/stocks/requests`, { headers });
+    if (res.status === 401) {
+      localStorage.removeItem('procurement_token');
+      window.location.reload();
+      return;
+    }
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to load stock requests');
     setStockRequests(Array.isArray(data) ? data : []);
