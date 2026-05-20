@@ -1037,7 +1037,7 @@ function AdminDashboard({ onLogout }) {
                   </select>
                 </div>
               </div>
-              <div className="dashboard-grid" style={{marginTop:0}}>
+              <div className="dashboard-grid" style={{marginTop:0, gridTemplateColumns:'1fr'}}>
                 {requests
                   .filter(
                     (r) =>
@@ -1050,7 +1050,7 @@ function AdminDashboard({ onLogout }) {
                       (r.priority && r.priority.toLowerCase() === requestPriorityFilter.toLowerCase())
                   )
                   .map((r) => (
-                    <div key={r._id} className="metric-card" style={{minWidth:220, marginBottom:8}}>
+                    <div key={r._id} className="metric-card" style={{marginBottom:8}}>
                       <div className="request-row-header">
                         <strong>{r.title}</strong>
                         <span
@@ -1065,8 +1065,13 @@ function AdminDashboard({ onLogout }) {
                       <div className="text-muted">
                         Flat {r.flatNumber || '-'}, {r.block || 'No block'}
                       </div>
-                      <div className="text-muted">
-                        Type: {r.requestType || '-'} · Category: {r.maintenanceCategory || '-'} ·
+                      <div className="text-muted" style={{padding:'4px 0'}}>
+                        Type: {r.requestType || '-'}
+                      </div>
+                      <div className="text-muted" style={{padding:'4px 0'}}>
+                        Category: {r.maintenanceCategory || '-'}
+                      </div>
+                      <div className="text-muted" style={{padding:'4px 0'}}>
                         Priority: {r.priority}
                       </div>
                       <div className="text-muted">
