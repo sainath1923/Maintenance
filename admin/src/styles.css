@@ -273,7 +273,6 @@ button {
 .metric-card {
   border-radius: 14px;
   padding: 10px 12px;
-  background: linear-gradient(135deg, #eff6ff 80%, #e0f2fe 100%);
   border: 1px solid rgba(59, 130, 246, 0.18);
 }
 
@@ -458,8 +457,31 @@ button {
   background: #dcfce7;
   color: #166534;
 }
+.requests-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1200px) {
+  .requests-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .app-card {
     padding: 20px;
+  }
+
+  .requests-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .requests-grid {
+    grid-template-columns: 1fr;
   }
 }

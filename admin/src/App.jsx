@@ -197,6 +197,119 @@ function AdminDashboard({ onLogout }) {
 
   const headerBuildingName = useBuildingName();
 
+  // Attendance geo-location settings per role
+  const ATTENDANCE_ROLES = ['technician', 'supervisor', 'stores', 'procurement', 'delivery'];
+  const [attendanceLocations, setAttendanceLocations] = useState({
+    technician: { lat: '', lng: '', radius: 50 },
+    supervisor: { lat: '', lng: '', radius: 50 },
+    stores: { lat: '', lng: '', radius: 50 },
+    procurement: { lat: '', lng: '', radius: 50 },
+    delivery: { lat: '', lng: '', radius: 50 }
+  });
+  const [attendanceSaving, setAttendanceSaving] = useState({});
+  const [attendanceMsg, setAttendanceMsg] = useState({});
+  const [attendanceError, setAttendanceError] = useState({});
+  const [attendanceRecords, setAttendanceRecords] = useState([]);
+  const [attendanceLoading, setAttendanceLoading] = useState(false);
+  const [attendanceRoleFilter, setAttendanceRoleFilter] = useState('all');
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+
+  const loadAttendanceLocations = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/locations`);
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceLocations((prev) => {
+          const next = { ...prev };
+          for (const role of ATTENDANCE_ROLES) {
+            if (data[role]) {
+              next[role] = {
+                lat: data[role].lat != null ? String(data[role].lat) : '',
+                lng: data[role].lng != null ? String(data[role].lng) : '',
+                radius: data[role].radius || 50
+              };
+            }
+          }
+          return next;
+        });
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const saveAttendanceLocation = async (role) => {
+    const loc = attendanceLocations[role];
+    const lat = parseFloat(loc.lat);
+    const lng = parseFloat(loc.lng);
+    const radius = parseFloat(loc.radius) || 50;
+    if (isNaN(lat) || isNaN(lng)) {
+      setAttendanceError((prev) => ({ ...prev, [role]: 'Please enter valid latitude and longitude.' }));
+      return;
+    }
+    setAttendanceSaving((prev) => ({ ...prev, [role]: true }));
+    setAttendanceError((prev) => ({ ...prev, [role]: '' }));
+    setAttendanceMsg((prev) => ({ ...prev, [role]: '' }));
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/locations/${role}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ lat, lng, radius })
+      });
+      if (res.ok) {
+        setAttendanceMsg((prev) => ({ ...prev, [role]: 'Location saved.' }));
+        setTimeout(() => setAttendanceMsg((prev) => ({ ...prev, [role]: '' })), 3000);
+      } else {
+        const d = await res.json();
+        setAttendanceError((prev) => ({ ...prev, [role]: d.message || 'Save failed.' }));
+      }
+    } catch {
+      setAttendanceError((prev) => ({ ...prev, [role]: 'Network error.' }));
+    } finally {
+      setAttendanceSaving((prev) => ({ ...prev, [role]: false }));
+    }
+  };
+
+  const detectLocationForRole = (role) => {
+    if (!navigator.geolocation) {
+      setAttendanceError((prev) => ({ ...prev, [role]: 'Geolocation not supported by this browser.' }));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setAttendanceLocations((prev) => ({
+          ...prev,
+          [role]: {
+            ...prev[role],
+            lat: String(pos.coords.latitude),
+            lng: String(pos.coords.longitude)
+          }
+        }));
+      },
+      () => {
+        setAttendanceError((prev) => ({ ...prev, [role]: 'Could not get current location.' }));
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const loadAttendanceRecords = async () => {
+    setAttendanceLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceRecords(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAttendanceLoading(false);
+    }
+  };
+
   const fetchAllRequests = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/requests`, {
@@ -337,6 +450,7 @@ function AdminDashboard({ onLogout }) {
       fetchAllRequests();
       fetchUsers();
       loadCompanyProfile();
+      loadAttendanceLocations();
     }
   }, []);
 
@@ -484,6 +598,13 @@ function AdminDashboard({ onLogout }) {
               onClick={() => setActiveTab('dashboard')}
             >
               Dashboard
+            </button>
+            <button
+              type="button"
+              className={"tab-button" + (activeTab === 'attendance' ? ' active' : '')}
+              onClick={() => { setActiveTab('attendance'); loadAttendanceRecords(); }}
+            >
+              Attendance
             </button>
           </div>
 
@@ -723,6 +844,7 @@ function AdminDashboard({ onLogout }) {
                     <option value="tenant">Tenant</option>
                     <option value="supervisor">Supervisor</option>
                     <option value="technician">Technician</option>
+                    <option value="delivery">Delivery</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -790,6 +912,7 @@ function AdminDashboard({ onLogout }) {
                     <option value="tenant">Tenant</option>
                     <option value="supervisor">Supervisor</option>
                     <option value="technician">Technician</option>
+                    <option value="delivery">Delivery</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -1037,7 +1160,7 @@ function AdminDashboard({ onLogout }) {
                   </select>
                 </div>
               </div>
-              <div className="dashboard-grid" style={{marginTop:0, gridTemplateColumns:'1fr'}}>
+              <div className="requests-grid">
                 {requests
                   .filter(
                     (r) =>
@@ -1049,8 +1172,11 @@ function AdminDashboard({ onLogout }) {
                       requestPriorityFilter === 'all' ||
                       (r.priority && r.priority.toLowerCase() === requestPriorityFilter.toLowerCase())
                   )
-                  .map((r) => (
-                    <div key={r._id} className="metric-card" style={{marginBottom:8}}>
+                  .map((r) => {
+                    // const isOverdueUnassigned = !r.technician && (Date.now() - new Date(r.createdAt)) > 24 * 60 * 60 * 1000;  
+                    const isOverdueUnassigned = !r.technician && (Date.now() - new Date(r.createdAt)) > 1 * 60 * 1000;
+                    return (
+                    <div key={r._id} className="metric-card" style={{...(isOverdueUnassigned ? { backgroundColor: '#fee2e2' } : {})}}>
                       <div className="request-row-header">
                         <strong>{r.title}</strong>
                         <span
@@ -1077,8 +1203,151 @@ function AdminDashboard({ onLogout }) {
                       <div className="text-muted">
                         Comments: {r.description || '-'}
                       </div>
+                      {(r.images?.length > 0 || r.video) && (
+                        <div style={{ marginTop: '8px' }}>
+                          {r.images?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: r.video ? '8px' : '0' }}>
+                              {r.images.map((src, i) => (
+                                <a key={i} href={`${API_BASE}${src}`} target="_blank" rel="noreferrer">
+                                  <img src={`${API_BASE}${src}`} alt={`photo ${i + 1}`} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }} />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                          {r.video && (
+                            <video src={`${API_BASE}${r.video}`} controls style={{ maxWidth: '100%', maxHeight: '160px', borderRadius: '6px', display: 'block' }} />
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'attendance' && (
+            <div className="card dashboard-card">
+              <div className="card-header-row">
+                <div className="card-title">Attendance geo-locations</div>
+              </div>
+              <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>
+                Set the allowed punch-in/out location for each role. Staff must be within the specified radius to record attendance.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              {ATTENDANCE_ROLES.map((role) => {
+                const loc = attendanceLocations[role];
+                return (
+                  <div key={role} style={{ flex: '1 1 180px', minWidth: '180px', padding: '16px', background: '#f9fafb', borderRadius: '10px', border: '1px solid rgba(148,163,184,0.3)' }}>
+                    <div style={{ fontWeight: 700, textTransform: 'capitalize', marginBottom: '10px', fontSize: '14px' }}>{role}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div className="field">
+                        <label>Latitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 25.2048"
+                          value={loc.lat}
+                          onChange={(e) => setAttendanceLocations((prev) => ({ ...prev, [role]: { ...prev[role], lat: e.target.value } }))}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Longitude</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 55.2708"
+                          value={loc.lng}
+                          onChange={(e) => setAttendanceLocations((prev) => ({ ...prev, [role]: { ...prev[role], lng: e.target.value } }))}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Radius (metres)</label>
+                        <input
+                          type="number"
+                          min="10"
+                          max="5000"
+                          value={loc.radius}
+                          onChange={(e) => setAttendanceLocations((prev) => ({ ...prev, [role]: { ...prev[role], radius: e.target.value } }))}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px' }}>
+                      <button className="btn-outline btn-small" type="button" onClick={() => detectLocationForRole(role)}>
+                        Use current location
+                      </button>
+                      <button
+                        className="btn-primary btn-small"
+                        type="button"
+                        disabled={attendanceSaving[role]}
+                        onClick={() => saveAttendanceLocation(role)}
+                      >
+                        {attendanceSaving[role] ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                    {attendanceMsg[role] && <p style={{ color: '#16a34a', fontSize: '12px', marginTop: '6px' }}>{attendanceMsg[role]}</p>}
+                    {attendanceError[role] && <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '6px' }}>{attendanceError[role]}</p>}
+                  </div>
+                );
+              })}
+              </div>
+
+              <div style={{ marginTop: '32px' }}>
+                <div className="card-header-row" style={{ marginBottom: '12px' }}>
+                  <div className="card-title">Attendance records</div>
+                  <button className="btn-outline btn-small" type="button" onClick={loadAttendanceRecords} disabled={attendanceLoading}>
+                    {attendanceLoading ? 'Loading…' : 'Refresh'}
+                  </button>
+                </div>
+                <div className="filters-row" style={{ marginBottom: '12px' }}>
+                  <div className="field">
+                    <label>Role</label>
+                    <select value={attendanceRoleFilter} onChange={(e) => setAttendanceRoleFilter(e.target.value)}>
+                      <option value="all">All roles</option>
+                      {ATTENDANCE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Date</label>
+                    <input type="date" value={attendanceDateFilter} onChange={(e) => setAttendanceDateFilter(e.target.value)} />
+                  </div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Date</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Name</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Role</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Punch In</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Punch Out</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendanceRecords
+                        .filter((r) => attendanceRoleFilter === 'all' || r.role === attendanceRoleFilter)
+                        .filter((r) => !attendanceDateFilter || r.date === attendanceDateFilter)
+                        .map((r) => (
+                          <tr key={r._id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                            <td style={{ padding: '8px 10px' }}>{r.date}</td>
+                            <td style={{ padding: '8px 10px' }}>{r.user?.name || '-'}</td>
+                            <td style={{ padding: '8px 10px', textTransform: 'capitalize' }}>{r.role}</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              {r.punchIn ? new Date(r.punchIn).toLocaleTimeString() : <span style={{ color: '#9ca3af' }}>—</span>}
+                            </td>
+                            <td style={{ padding: '8px 10px' }}>
+                              {r.punchOut ? new Date(r.punchOut).toLocaleTimeString() : <span style={{ color: '#9ca3af' }}>—</span>}
+                            </td>
+                          </tr>
+                        ))}
+                      {attendanceRecords.filter((r) => attendanceRoleFilter === 'all' || r.role === attendanceRoleFilter).filter((r) => !attendanceDateFilter || r.date === attendanceDateFilter).length === 0 && (
+                        <tr>
+                          <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: '#9ca3af' }}>No records found.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
