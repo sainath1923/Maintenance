@@ -252,6 +252,38 @@ button {
   font-size: 13px;
 }
 
+.stocks-table-wrap {
+  margin-top: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.stocks-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+  font-size: 13px;
+}
+
+.stocks-table th,
+.stocks-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.stocks-table th {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.stocks-empty-row {
+  color: var(--text-muted);
+  text-align: center;
+}
+
 .dashboard-card {
   background: radial-gradient(circle at top right, rgba(249, 115, 22, 0.09), transparent 55%),
     #ffffff;

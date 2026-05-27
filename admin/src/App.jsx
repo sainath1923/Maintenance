@@ -531,6 +531,63 @@ function AdminDashboard({ onLogout }) {
 
   const maxMonthlyValue = Math.max(1, ...monthlyTrend.map((m) => m.count));
 
+  // Top apartments by request count with most common category
+  const apartmentMap = {};
+  requests.forEach((r) => {
+    const label = `Flat ${r.flatNumber || '-'}, ${r.block || 'No block'}`;
+    if (!apartmentMap[label]) apartmentMap[label] = { count: 0, categories: {} };
+    apartmentMap[label].count += 1;
+    const cat = r.maintenanceCategory || 'Other';
+    apartmentMap[label].categories[cat] = (apartmentMap[label].categories[cat] || 0) + 1;
+  });
+  const topApartments = Object.entries(apartmentMap)
+    .map(([label, data]) => ({
+      label,
+      count: data.count,
+      topCategory: Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Technician resolution times
+  const techResolutionMap = {};
+  requests.forEach((r) => {
+    if (r.status === 'Completed' && r.technician && r.createdAt) {
+      const resolvedAt = r.completedAt || r.updatedAt;
+      if (!resolvedAt) return;
+      const durationMs = new Date(resolvedAt) - new Date(r.createdAt);
+      if (durationMs > 0) {
+        if (!techResolutionMap[r.technician]) techResolutionMap[r.technician] = [];
+        techResolutionMap[r.technician].push(durationMs);
+      }
+    }
+  });
+  const fmtDuration = (ms) => {
+    const totalMins = Math.round(ms / 60000);
+    if (totalMins < 60) return `${totalMins}m`;
+    const hrs = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    if (hrs < 24) return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+    const days = Math.floor(hrs / 24);
+    const remHrs = hrs % 24;
+    return remHrs > 0 ? `${days}d ${remHrs}h` : `${days}d`;
+  };
+  const techResolutionRows = Object.entries(techResolutionMap).map(([techId, durations]) => {
+    const tech = techniciansOnly.find((t) => t._id === techId);
+    const avgMs = durations.reduce((a, b) => a + b, 0) / durations.length;
+    const minMs = Math.min(...durations);
+    const maxMs = Math.max(...durations);
+    return {
+      techId,
+      name: tech ? `${tech.name}${tech.technicianType ? ` (${tech.technicianType})` : ''}` : 'Unknown',
+      count: durations.length,
+      avg: fmtDuration(avgMs),
+      min: fmtDuration(minMs),
+      max: fmtDuration(maxMs),
+      avgMs
+    };
+  }).sort((a, b) => a.avgMs - b.avgMs);
+
   return (
     <div className="app-shell">
       <div className="app-card">
@@ -1120,6 +1177,68 @@ function AdminDashboard({ onLogout }) {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+              <div className="dashboard-row-50" style={{ marginTop: '16px' }}>
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">Top apartments by requests</div>
+                  {topApartments.length === 0 ? (
+                    <div className="text-muted" style={{ fontSize: '12px' }}>No request data yet.</div>
+                  ) : (
+                    <div className="stocks-table-wrap" style={{ marginTop: '8px' }}>
+                      <table className="stocks-table">
+                        <thead>
+                          <tr>
+                            <th>Apartment</th>
+                            <th>Requests</th>
+                            <th>Top Category</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topApartments.map((apt) => (
+                            <tr key={apt.label}>
+                              <td>{apt.label}</td>
+                              <td>{apt.count}</td>
+                              <td>{apt.topCategory}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">Technician resolution times</div>
+                  {techResolutionRows.length === 0 ? (
+                    <div className="text-muted" style={{ fontSize: '12px' }}>
+                      No completed requests with resolution data yet.
+                    </div>
+                  ) : (
+                    <div className="stocks-table-wrap" style={{ marginTop: '8px' }}>
+                      <table className="stocks-table">
+                        <thead>
+                          <tr>
+                            <th>Technician</th>
+                            <th>Completed</th>
+                            <th>Avg Time</th>
+                            <th>Fastest</th>
+                            <th>Slowest</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {techResolutionRows.map((row) => (
+                            <tr key={row.techId}>
+                              <td>{row.name}</td>
+                              <td>{row.count}</td>
+                              <td><strong>{row.avg}</strong></td>
+                              <td style={{ color: '#16a34a' }}>{row.min}</td>
+                              <td style={{ color: '#dc2626' }}>{row.max}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
