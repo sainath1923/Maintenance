@@ -8,7 +8,15 @@ const StockSchema = new mongoose.Schema(
     quantity: { type: Number, default: 0, min: 0 },
     price: { type: Number, default: 0, min: 0 },
     updatedOn: { type: Date, required: true },
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    batches: [
+      {
+        batchNumber: { type: String, trim: true, default: '' },
+        quantity: { type: Number, required: true, min: 0 },
+        addedOn: { type: Date, required: true },
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+      }
+    ]
   },
   { timestamps: true }
 );

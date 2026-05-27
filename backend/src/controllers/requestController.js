@@ -58,11 +58,11 @@ exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, notes, costEstimate } = req.body;
-    const request = await Request.findByIdAndUpdate(
-      id,
-      { status, notes, costEstimate },
-      { new: true }
-    );
+    const update = { status, notes, costEstimate };
+    if (status === 'Completed') {
+      update.completedAt = new Date();
+    }
+    const request = await Request.findByIdAndUpdate(id, update, { new: true });
     res.json(request);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

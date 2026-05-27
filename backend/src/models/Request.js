@@ -35,7 +35,8 @@ const RequestSchema = new mongoose.Schema(
     completionVideo: { type: String },
     invoiceUrl: String,
     costEstimate: Number,
-    costActual: Number
+    costActual: Number,
+    completedAt: { type: Date }
   },
   { timestamps: true }
 );

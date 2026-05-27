@@ -21,7 +21,82 @@ exports.getStockCatalog = async (req, res) => {
 exports.listStockEntries = async (req, res) => {
   try {
     const entries = await Stock.find().sort({ updatedOn: -1, updatedAt: -1 }).lean();
-    res.json(entries);
+    // Ensure quantity always reflects the sum of batches
+    const normalised = entries.map((entry) => {
+      if (entry.batches && entry.batches.length > 0) {
+        const batchTotal = entry.batches.reduce((s, b) => s + (Number(b.quantity) || 0), 0);
+        return { ...entry, quantity: batchTotal, isAvailable: batchTotal > 0 };
+      }
+      return entry;
+    });
+    res.json(normalised);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.deleteStockEntry = async (req, res) => {
+  try {
+    const entry = await Stock.findByIdAndDelete(req.params.id);
+    if (!entry) {
+      return res.status(404).json({ message: 'Stock item not found' });
+    }
+    res.json({ message: 'Stock item deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.updateBatch = async (req, res) => {
+  try {
+    const { id, batchId } = req.params;
+    const { batchNumber, quantity, addedOn } = req.body;
+
+    const parsedQuantity = Number(quantity);
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
+      return res.status(400).json({ message: 'quantity must be a valid non-negative number' });
+    }
+
+    const parsedDate = addedOn ? new Date(addedOn) : null;
+    if (parsedDate && Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'addedOn must be a valid date' });
+    }
+
+    const stock = await Stock.findById(id);
+    if (!stock) return res.status(404).json({ message: 'Stock item not found' });
+
+    const batch = stock.batches.id(batchId);
+    if (!batch) return res.status(404).json({ message: 'Batch not found' });
+
+    const oldQty = batch.quantity;
+    batch.batchNumber = batchNumber !== undefined ? String(batchNumber) : batch.batchNumber;
+    batch.quantity = parsedQuantity;
+    if (parsedDate) batch.addedOn = parsedDate;
+
+    stock.quantity = Math.max(0, stock.quantity - oldQty + parsedQuantity);
+    stock.isAvailable = stock.quantity > 0;
+    await stock.save();
+    res.json(stock.toObject());
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.deleteBatch = async (req, res) => {
+  try {
+    const { id, batchId } = req.params;
+
+    const stock = await Stock.findById(id);
+    if (!stock) return res.status(404).json({ message: 'Stock item not found' });
+
+    const batch = stock.batches.id(batchId);
+    if (!batch) return res.status(404).json({ message: 'Batch not found' });
+
+    stock.quantity = Math.max(0, stock.quantity - batch.quantity);
+    stock.isAvailable = stock.quantity > 0;
+    batch.deleteOne();
+    await stock.save();
+    res.json(stock.toObject());
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -29,7 +104,7 @@ exports.listStockEntries = async (req, res) => {
 
 exports.upsertStockEntry = async (req, res) => {
   try {
-    const { category, item, quantity, price, updatedOn } = req.body;
+    const { category, item, quantity, price, updatedOn, batchNumber } = req.body;
 
     if (!category || !item || !updatedOn) {
       return res.status(400).json({ message: 'category, item and updatedOn are required' });
@@ -50,22 +125,48 @@ exports.upsertStockEntry = async (req, res) => {
       return res.status(400).json({ message: 'updatedOn must be a valid date' });
     }
 
-    const normalizedQuantity = parsedQuantity;
-    const isAvailable = normalizedQuantity > 0;
+    const isEdit = req.body.isEdit === true;
 
-    const entry = await Stock.findOneAndUpdate(
-      { category, item },
-      {
-        category,
-        item,
-        isAvailable,
-        quantity: normalizedQuantity,
-        price: parsedPrice,
-        updatedOn: parsedDate,
-        updatedBy: req.user?.id
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    ).lean();
+    let entry;
+    if (isEdit) {
+      const isAvailable = parsedQuantity > 0;
+      entry = await Stock.findOneAndUpdate(
+        { category, item },
+        {
+          $set: {
+            isAvailable,
+            quantity: parsedQuantity,
+            price: parsedPrice,
+            updatedOn: parsedDate,
+            updatedBy: req.user?.id,
+            batches: [{ batchNumber: batchNumber || '', quantity: parsedQuantity, addedOn: parsedDate, addedBy: req.user?.id }]
+          }
+        },
+        { new: true }
+      ).lean();
+      if (!entry) {
+        return res.status(404).json({ message: 'Stock item not found' });
+      }
+    } else {
+      const newBatch = { batchNumber: batchNumber || '', quantity: parsedQuantity, addedOn: parsedDate, addedBy: req.user?.id };
+      const existing = await Stock.findOne({ category, item }).lean();
+      const newQuantity = (existing ? existing.quantity : 0) + parsedQuantity;
+      const isAvailable = newQuantity > 0;
+      entry = await Stock.findOneAndUpdate(
+        { category, item },
+        {
+          $inc: { quantity: parsedQuantity },
+          $push: { batches: newBatch },
+          $set: {
+            isAvailable,
+            price: parsedPrice,
+            updatedOn: parsedDate,
+            updatedBy: req.user?.id
+          }
+        },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      ).lean();
+    }
 
     res.json(entry);
   } catch (err) {
@@ -304,16 +405,6 @@ exports.approveStockRequest = async (req, res) => {
     if (!stock) {
       return res.status(404).json({ message: 'Stock item not found' });
     }
-
-    if (!stock.isAvailable || stock.quantity < stockRequest.quantity) {
-      return res.status(400).json({ message: 'Insufficient stock quantity to approve request' });
-    }
-
-    stock.quantity = stock.quantity - stockRequest.quantity;
-    stock.isAvailable = stock.quantity > 0;
-    stock.updatedOn = new Date();
-    stock.updatedBy = req.user.id;
-    await stock.save();
 
     stockRequest.status = 'Approved';
     stockRequest.approvedBy = req.user.id;
