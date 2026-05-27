@@ -154,6 +154,7 @@ function StoresDashboard({ onLogout }) {
   const [price, setPrice] = useState('');
   const [updatedOn, setUpdatedOn] = useState(new Date().toISOString().slice(0, 10));
   const [editingEntryId, setEditingEntryId] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
   const [selectedYearFilter, setSelectedYearFilter] = useState('all');
   const [deliveryPersons, setDeliveryPersons] = useState([]);
   const [assigningRequestId, setAssigningRequestId] = useState(null);
@@ -169,6 +170,9 @@ function StoresDashboard({ onLogout }) {
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [attendanceError, setAttendanceError] = useState('');
   const [attendanceMsg, setAttendanceMsg] = useState('');
+  const [expandedStockIds, setExpandedStockIds] = useState(new Set());
+  const [editingBatch, setEditingBatch] = useState(null);
+  // editingBatch: { entryId, batchId, batchNumber, quantity, addedOn }
 
   const loadAttendanceToday = async () => {
     try {
@@ -260,6 +264,23 @@ function StoresDashboard({ onLogout }) {
   const categoryOptions = useMemo(() => Object.keys(stockItemsByCategory), [stockItemsByCategory]);
   const itemOptions = selectedCategory ? stockItemsByCategory[selectedCategory] || [] : [];
   const formatCurrency = (value) => Number(value || 0).toFixed(2);
+  const getStockAge = (createdAt) => {
+    if (!createdAt) return null;
+    const created = new Date(createdAt);
+    if (Number.isNaN(created.getTime())) return null;
+    const days = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+  const stockAgeLabel = (days) => {
+    if (days === null) return { text: '-', color: '#9ca3af' };
+    if (days <= 30) return { text: `${days}d`, color: '#16a34a' };
+    if (days <= 90) return { text: `${days}d`, color: '#d97706' };
+    return { text: `${days}d`, color: '#dc2626' };
+  };
+  const sortedStockEntries = useMemo(
+    () => [...stockEntries].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
+    [stockEntries]
+  );
   const chartPalette = ['#ea580c', '#f59e0b', '#2563eb', '#0ea5e9', '#10b981', '#84cc16', '#a855f7', '#ef4444'];
   const approvedStockRequests = useMemo(
     () => stockRequests.filter((request) => request.status === 'Approved'),
@@ -416,6 +437,7 @@ function StoresDashboard({ onLogout }) {
     setPrice('');
     setUpdatedOn(new Date().toISOString().slice(0, 10));
     setEditingEntryId('');
+    setBatchNumber('');
   };
   const startEditingEntry = (entry) => {
     setError('');
@@ -458,7 +480,9 @@ function StoresDashboard({ onLogout }) {
           item: selectedItem,
           quantity: parsedQty,
           price: parsedPrice,
-          updatedOn
+          updatedOn,
+          batchNumber: batchNumber.trim(),
+          isEdit: Boolean(editingEntryId)
         })
       });
       const data = await res.json();
@@ -479,6 +503,77 @@ function StoresDashboard({ onLogout }) {
       setError('Network error while saving stock item');
     }
   };
+  const deleteStockEntry = async (entry) => {
+    if (!window.confirm(`Delete "${entry.item}" (${entry.category})? This cannot be undone.`)) return;
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/entries/${entry._id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to delete stock item');
+        return;
+      }
+      notification.success({
+        message: 'Stock Item Deleted',
+        description: `"${entry.item}" has been removed.`,
+        placement: 'topRight',
+        duration: 3
+      });
+      await fetchEntries();
+    } catch {
+      setError('Network error while deleting stock item');
+    }
+  };
+  const saveBatchEdit = async () => {
+    if (!editingBatch) return;
+    const { entryId, batchId, batchNumber, quantity, addedOn } = editingBatch;
+    const parsedQty = Number(quantity);
+    if (!Number.isFinite(parsedQty) || parsedQty < 0) {
+      setError('Batch quantity must be a valid non-negative number.');
+      return;
+    }
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/entries/${entryId}/batches/${batchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ batchNumber, quantity: parsedQty, addedOn })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to update batch');
+        return;
+      }
+      setEditingBatch(null);
+      await fetchEntries();
+    } catch {
+      setError('Network error while updating batch');
+    }
+  };
+
+  const deleteBatch = async (entry, batch) => {
+    if (!window.confirm(`Delete batch "${batch.batchNumber || 'Batch'}" (qty: ${batch.quantity})? This cannot be undone.`)) return;
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/entries/${entry._id}/batches/${batch._id}`, {
+        method: 'DELETE',
+        headers
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to delete batch');
+        return;
+      }
+      notification.success({ message: 'Batch Deleted', placement: 'topRight', duration: 3 });
+      await fetchEntries();
+    } catch {
+      setError('Network error while deleting batch');
+    }
+  };
+
   const approveRequest = async (requestId) => {
     setError('');
     setInfoMessage('');
@@ -916,6 +1011,17 @@ function StoresDashboard({ onLogout }) {
                     placeholder="Enter quantity"
                   />
                 </div>
+                {!editingEntryId && (
+                  <div className="field">
+                    <label>Batch / Lot No.</label>
+                    <input
+                      type="text"
+                      value={batchNumber}
+                      onChange={(e) => setBatchNumber(e.target.value)}
+                      placeholder="e.g. INV-2026-001"
+                    />
+                  </div>
+                )}
                 <div className="field">
                   <label>Price</label>
                   <input
@@ -946,9 +1052,10 @@ function StoresDashboard({ onLogout }) {
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '32px' }}></th>
                       <th>Category</th>
                       <th>Item</th>
-                      <th>Quantity</th>
+                      <th>Total Qty</th>
                       <th>Item Price</th>
                       <th>Total Price</th>
                       <th>Updated On</th>
@@ -957,33 +1064,157 @@ function StoresDashboard({ onLogout }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {stockEntries.length === 0 && (
+                    {sortedStockEntries.length === 0 && (
                       <tr>
-                        <td colSpan="8" className="muted-cell">
+                        <td colSpan="9" className="muted-cell">
                           No stock items available.
                         </td>
                       </tr>
                     )}
-                    {stockEntries.map((entry) => (
-                      <tr key={entry._id}>
-                        <td>{entry.category}</td>
-                        <td>{entry.item}</td>
-                        <td>{entry.quantity ?? 0}</td>
-                        <td>{formatCurrency(entry.price)}</td>
-                        <td>{formatCurrency(Number(entry.quantity || 0) * Number(entry.price || 0))}</td>
-                        <td>{entry.updatedOn ? new Date(entry.updatedOn).toLocaleDateString() : '-'}</td>
-                        <td>{Number(entry.quantity || 0) > 0 ? 'Available' : 'Not Available'}</td>
-                        <td>
-                          <button
-                            className="btn-small btn-outline"
-                            type="button"
-                            onClick={() => startEditingEntry(entry)}
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {sortedStockEntries.map((entry) => {
+                      const isExpanded = expandedStockIds.has(entry._id);
+                      const batches = [...(entry.batches || [])].sort((a, b) => new Date(a.addedOn) - new Date(b.addedOn));
+                      const hasBatches = batches.length > 0;
+                      const effectiveQty = hasBatches
+                        ? batches.reduce((s, b) => s + (Number(b.quantity) || 0), 0)
+                        : (entry.quantity ?? 0);
+                      return (
+                        <React.Fragment key={entry._id}>
+                          <tr>
+                            <td style={{ textAlign: 'center' }}>
+                              {hasBatches && (
+                                <button
+                                  className="btn-small btn-outline"
+                                  type="button"
+                                  style={{ padding: '2px 7px', fontSize: '11px' }}
+                                  onClick={() => setExpandedStockIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(entry._id)) next.delete(entry._id);
+                                    else next.add(entry._id);
+                                    return next;
+                                  })}
+                                >
+                                  {isExpanded ? '▼' : '▶'}
+                                </button>
+                              )}
+                            </td>
+                            <td>{entry.category}</td>
+                            <td>{entry.item}</td>
+                            <td>{effectiveQty}</td>
+                            <td>{formatCurrency(entry.price)}</td>
+                            <td>{formatCurrency(effectiveQty * Number(entry.price || 0))}</td>
+                            <td>{entry.updatedOn ? new Date(entry.updatedOn).toLocaleDateString() : '-'}</td>
+                            <td>{effectiveQty > 0 ? 'Available' : 'Not Available'}</td>
+                            <td style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                className="btn-small btn-outline"
+                                type="button"
+                                onClick={() => startEditingEntry(entry)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn-small btn-outline"
+                                type="button"
+                                style={{ color: '#dc2626', borderColor: '#dc2626' }}
+                                onClick={() => deleteStockEntry(entry)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && batches.map((batch, idx) => {
+                            const ageDays = getStockAge(batch.addedOn);
+                            const age = stockAgeLabel(ageDays);
+                            const isOldest = idx === 0 && batches.length > 1;
+                            const isEditingThis = editingBatch && editingBatch.entryId === entry._id && editingBatch.batchId === batch._id;
+                            if (isEditingThis) {
+                              return (
+                                <tr key={`${entry._id}-batch-${idx}`} style={{ backgroundColor: '#fffbeb', fontSize: '13px' }}>
+                                  <td></td>
+                                  <td style={{ paddingLeft: '28px', color: '#6b7280' }}>Batch {idx + 1}</td>
+                                  <td>
+                                    <input
+                                      style={{ width: '100%', fontSize: '12px', padding: '2px 4px' }}
+                                      value={editingBatch.batchNumber}
+                                      onChange={(e) => setEditingBatch(prev => ({ ...prev, batchNumber: e.target.value }))}
+                                      placeholder="Batch / Lot No."
+                                    />
+                                  </td>
+                                  <td>
+                                    <input
+                                      type="number" min="0"
+                                      style={{ width: '70px', fontSize: '12px', padding: '2px 4px' }}
+                                      value={editingBatch.quantity}
+                                      onChange={(e) => setEditingBatch(prev => ({ ...prev, quantity: e.target.value }))}
+                                    />
+                                  </td>
+                                  <td>{formatCurrency(entry.price)}</td>
+                                  <td>{formatCurrency(Number(editingBatch.quantity || 0) * Number(entry.price || 0))}</td>
+                                  <td>
+                                    <input
+                                      type="date"
+                                      style={{ fontSize: '12px', padding: '2px 4px' }}
+                                      value={editingBatch.addedOn}
+                                      onChange={(e) => setEditingBatch(prev => ({ ...prev, addedOn: e.target.value }))}
+                                    />
+                                  </td>
+                                  <td></td>
+                                  <td style={{ display: 'flex', gap: '4px' }}>
+                                    <button className="btn-small btn-primary" type="button" onClick={saveBatchEdit}>Save</button>
+                                    <button className="btn-small btn-outline" type="button" onClick={() => setEditingBatch(null)}>Cancel</button>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return (
+                              <tr key={`${entry._id}-batch-${idx}`} style={{ backgroundColor: '#f8fafc', fontSize: '13px' }}>
+                                <td></td>
+                                <td style={{ paddingLeft: '28px', color: '#6b7280' }}>Batch {idx + 1}</td>
+                                <td>
+                                  <span style={{ fontFamily: 'monospace', fontSize: '12px', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px', color: '#334155' }}>
+                                    {batch.batchNumber || '—'}
+                                  </span>
+                                  {isOldest && (
+                                    <span style={{ marginLeft: '6px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', padding: '1px 6px', fontSize: '11px', fontWeight: 600 }}>
+                                      Release First
+                                    </span>
+                                  )}
+                                </td>
+                                <td>{batch.quantity}</td>
+                                <td>{formatCurrency(entry.price)}</td>
+                                <td>{formatCurrency(batch.quantity * Number(entry.price || 0))}</td>
+                                <td>{batch.addedOn ? new Date(batch.addedOn).toLocaleDateString() : '-'}</td>
+                                <td><span style={{ fontWeight: 600, color: age.color }}>{age.text}</span></td>
+                                <td style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    className="btn-small btn-outline"
+                                    type="button"
+                                    onClick={() => setEditingBatch({
+                                      entryId: entry._id,
+                                      batchId: batch._id,
+                                      batchNumber: batch.batchNumber || '',
+                                      quantity: String(batch.quantity),
+                                      addedOn: batch.addedOn ? new Date(batch.addedOn).toISOString().slice(0, 10) : ''
+                                    })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="btn-small btn-outline"
+                                    type="button"
+                                    style={{ color: '#dc2626', borderColor: '#dc2626' }}
+                                    onClick={() => deleteBatch(entry, batch)}
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
