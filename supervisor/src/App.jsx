@@ -188,6 +188,13 @@ function SupervisorDashboard({ onLogout }) {
   const [stockRequests, setStockRequests] = useState([]);
   const [stockRequestsError, setStockRequestsError] = useState('');
   const [viewMediaRequest, setViewMediaRequest] = useState(null);
+  const [techDropdownOpen, setTechDropdownOpen] = useState({});
+
+  useEffect(() => {
+    const handleClickOutside = () => setTechDropdownOpen({});
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
@@ -551,6 +558,65 @@ function SupervisorDashboard({ onLogout }) {
   });
 
   const maxMonthlyValue = Math.max(1, ...monthlyTrend.map((m) => m.count));
+
+  // Top apartments by request count with most common category
+  const apartmentMap = {};
+  requests.forEach((r) => {
+    const label = `Flat ${r.flatNumber || '-'}, ${r.block || 'No block'}`;
+    if (!apartmentMap[label]) apartmentMap[label] = { count: 0, categories: {} };
+    apartmentMap[label].count += 1;
+    const cat = r.maintenanceCategory || 'Other';
+    apartmentMap[label].categories[cat] = (apartmentMap[label].categories[cat] || 0) + 1;
+  });
+  const topApartments = Object.entries(apartmentMap)
+    .map(([label, data]) => ({
+      label,
+      count: data.count,
+      topCategory: Object.entries(data.categories).sort((a, b) => b[1] - a[1])[0]?.[0] || '-'
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // Technician resolution times (completedAt preferred, updatedAt as fallback for older records)
+  const techResolutionMap = {};
+  requests.forEach((r) => {
+    if (r.status === 'Completed' && r.technician && r.createdAt) {
+      const resolvedAt = r.completedAt || r.updatedAt;
+      if (!resolvedAt) return;
+      const techId = r.technician;
+      const durationMs = new Date(resolvedAt) - new Date(r.createdAt);
+      if (durationMs > 0) {
+        if (!techResolutionMap[techId]) techResolutionMap[techId] = [];
+        techResolutionMap[techId].push(durationMs);
+      }
+    }
+  });
+  const techResolutionRows = Object.entries(techResolutionMap).map(([techId, durations]) => {
+    const tech = technicians.find((t) => t._id === techId);
+    const avgMs = durations.reduce((a, b) => a + b, 0) / durations.length;
+    const minMs = Math.min(...durations);
+    const maxMs = Math.max(...durations);
+    const fmtDuration = (ms) => {
+      const totalMins = Math.round(ms / 60000);
+      if (totalMins < 60) return `${totalMins}m`;
+      const hrs = Math.floor(totalMins / 60);
+      const mins = totalMins % 60;
+      if (hrs < 24) return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+      const days = Math.floor(hrs / 24);
+      const remHrs = hrs % 24;
+      return remHrs > 0 ? `${days}d ${remHrs}h` : `${days}d`;
+    };
+    return {
+      techId,
+      name: tech ? `${tech.name}${tech.technicianType ? ` (${tech.technicianType})` : ''}` : 'Unknown',
+      count: durations.length,
+      avg: fmtDuration(avgMs),
+      min: fmtDuration(minMs),
+      max: fmtDuration(maxMs),
+      avgMs
+    };
+  }).sort((a, b) => a.avgMs - b.avgMs);
+
   return (
     <div className="app-shell">
       <div className="app-card">
@@ -891,6 +957,68 @@ function SupervisorDashboard({ onLogout }) {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+              <div className="dashboard-row-50" style={{ marginTop: '16px' }}>
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">Top apartments by requests</div>
+                  {topApartments.length === 0 ? (
+                    <div className="text-muted" style={{ fontSize: '12px' }}>No request data yet.</div>
+                  ) : (
+                    <div className="stocks-table-wrap" style={{ marginTop: '8px' }}>
+                      <table className="stocks-table">
+                        <thead>
+                          <tr>
+                            <th>Apartment</th>
+                            <th>Requests</th>
+                            <th>Top Category</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topApartments.map((apt) => (
+                            <tr key={apt.label}>
+                              <td>{apt.label}</td>
+                              <td>{apt.count}</td>
+                              <td>{apt.topCategory}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div className="dashboard-chart dashboard-half">
+                  <div className="section-title">Technician resolution times</div>
+                  {techResolutionRows.length === 0 ? (
+                    <div className="text-muted" style={{ fontSize: '12px' }}>
+                      No completed requests with resolution data yet.
+                    </div>
+                  ) : (
+                    <div className="stocks-table-wrap" style={{ marginTop: '8px' }}>
+                      <table className="stocks-table">
+                        <thead>
+                          <tr>
+                            <th>Technician</th>
+                            <th>Completed</th>
+                            <th>Avg Time</th>
+                            <th>Fastest</th>
+                            <th>Slowest</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {techResolutionRows.map((row) => (
+                            <tr key={row.techId}>
+                              <td>{row.name}</td>
+                              <td>{row.count}</td>
+                              <td><strong>{row.avg}</strong></td>
+                              <td style={{ color: '#16a34a' }}>{row.min}</td>
+                              <td style={{ color: '#dc2626' }}>{row.max}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1299,46 +1427,85 @@ function SupervisorDashboard({ onLogout }) {
                       </div>
                       <div className="field">
                         <label>Select technician</label>
-                        <select
-                          value={assignment[r._id] || ''}
-                          onChange={(e) =>
-                            setAssignment((prev) => ({
-                              ...prev,
-                              [r._id]: e.target.value
-                            }))
+                        {(() => {
+                          const selectedSkills = Object.entries(skillFilters)
+                            .filter(([, val]) => val)
+                            .map(([key]) => key);
+                          let filtered = technicians;
+                          if (selectedSkills.length > 0) {
+                            filtered = technicians.filter((t) =>
+                              t.technicianType && selectedSkills.some((skill) => {
+                                const skillMap = { ac: 'ac technician', electrician: 'electrician', plumber: 'plumber', carpenter: 'carpenter', painter: 'painter', other: 'other' };
+                                return t.technicianType.toLowerCase() === skillMap[skill];
+                              })
+                            );
                           }
-                        >
-                          <option value="">Select</option>
-                          {(() => {
-                            // Get selected skill types
-                            const selectedSkills = Object.entries(skillFilters)
-                              .filter(([key, val]) => val)
-                              .map(([key]) => key);
-                            // If none selected, show all
-                            let filtered = technicians;
-                            if (selectedSkills.length > 0) {
-                              filtered = technicians.filter((t) =>
-                                t.technicianType && selectedSkills.some(skill => {
-                                  // Normalize for matching
-                                  const skillMap = {
-                                    ac: 'ac',
-                                    electrician: 'electrician',
-                                    plumber: 'plumber',
-                                    carpenter: 'carpenter',
-                                    painter: 'painter',
-                                    other: 'other'
-                                  };
-                                  return t.technicianType.toLowerCase() === skillMap[skill];
-                                })
-                              );
-                            }
-                            return filtered.map((t) => (
-                              <option key={t._id} value={t._id}>
-                                {t.name} {t.technicianType ? `(${t.technicianType})` : ''}
-                              </option>
-                            ));
-                          })()}
-                        </select>
+                          const selectedTech = technicians.find((t) => t._id === (assignment[r._id] || ''));
+                          const isOpen = !!techDropdownOpen[r._id];
+                          return (
+                            <div style={{ position: 'relative' }}>
+                              <div
+                                onClick={(e) => { e.stopPropagation(); setTechDropdownOpen((prev) => ({ ...prev, [r._id]: !prev[r._id] })); }}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '8px',
+                                  border: '1px solid var(--border-subtle, #d1d5db)',
+                                  borderRadius: '6px', padding: '7px 10px',
+                                  cursor: 'pointer', background: '#fff',
+                                  fontSize: '14px', userSelect: 'none'
+                                }}
+                              >
+                                {selectedTech ? (
+                                  <>
+                                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0, background: technicianUsage[selectedTech._id] ? '#ef4444' : '#22c55e', display: 'inline-block' }} />
+                                    <span>{selectedTech.name} {selectedTech.technicianType ? `(${selectedTech.technicianType})` : ''}{technicianUsage[selectedTech._id] ? ` — ${technicianUsage[selectedTech._id]} job${technicianUsage[selectedTech._id] > 1 ? 's' : ''}` : ''}</span>
+                                  </>
+                                ) : (
+                                  <span style={{ color: '#9ca3af' }}>Select</span>
+                                )}
+                                <span style={{ marginLeft: 'auto', fontSize: '10px', color: '#6b7280' }}>{isOpen ? '▲' : '▼'}</span>
+                              </div>
+                              {isOpen && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{
+                                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+                                  background: '#fff', border: '1px solid var(--border-subtle, #d1d5db)',
+                                  borderRadius: '6px', marginTop: '2px',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                                  maxHeight: '200px', overflowY: 'auto'
+                                }}>
+                                  <div
+                                    onClick={() => { setAssignment((prev) => ({ ...prev, [r._id]: '' })); setTechDropdownOpen((prev) => ({ ...prev, [r._id]: false })); }}
+                                    style={{ padding: '8px 10px', fontSize: '14px', color: '#9ca3af', cursor: 'pointer' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                  >
+                                    Select
+                                  </div>
+                                  {filtered.map((t) => {
+                                    const jobCount = technicianUsage[t._id] || 0;
+                                    const isOccupied = jobCount > 0;
+                                    const busyLabel = isOccupied ? ` — ${jobCount} job${jobCount > 1 ? 's' : ''}` : '';
+                                    return (
+                                      <div
+                                        key={t._id}
+                                        onClick={() => { setAssignment((prev) => ({ ...prev, [r._id]: t._id })); setTechDropdownOpen((prev) => ({ ...prev, [r._id]: false })); }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: 'pointer', fontSize: '14px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                      >
+                                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0, background: isOccupied ? '#ef4444' : '#22c55e', display: 'inline-block' }} />
+                                        <span style={{ color: '#111827' }}>
+                                          {t.name} {t.technicianType ? `(${t.technicianType})` : ''}{busyLabel}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <div style={{ marginTop: '8px' }}>
                         <button
