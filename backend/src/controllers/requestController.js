@@ -6,6 +6,16 @@ exports.createRequest = async (req, res) => {
   try {
     const tenantId = req.user.id;
     const data = { ...req.body, tenant: tenantId };
+
+    if (req.files) {
+      if (req.files.images && req.files.images.length > 0) {
+        data.images = req.files.images.map((f) => `/uploads/request-media/${f.filename}`);
+      }
+      if (req.files.video && req.files.video.length > 0) {
+        data.video = `/uploads/request-media/${req.files.video[0].filename}`;
+      }
+    }
+
     const request = await Request.create(data);
     res.status(201).json(request);
   } catch (err) {
@@ -92,6 +102,36 @@ exports.listAll = async (req, res) => {
     const requests = await Request.find().sort({ createdAt: -1 });
     res.json(requests);
   } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.uploadCompletionMedia = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const update = {};
+
+    if (req.files) {
+      if (req.files.images && req.files.images.length > 0) {
+        const newImages = req.files.images.map((f) => `/uploads/request-media/${f.filename}`);
+        const existing = await Request.findById(id, 'completionImages');
+        if (!existing) return res.status(404).json({ message: 'Request not found' });
+        update.completionImages = [...(existing.completionImages || []), ...newImages];
+      }
+      if (req.files.video && req.files.video.length > 0) {
+        update.completionVideo = `/uploads/request-media/${req.files.video[0].filename}`;
+      }
+    }
+
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
+    }
+
+    const updated = await Request.findByIdAndUpdate(id, update, { new: true });
+    if (!updated) return res.status(404).json({ message: 'Request not found' });
+    res.json(updated);
+  } catch (err) {
+    console.error('Upload completion media error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -15,6 +15,7 @@ const RequestSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: String,
     images: [String],
+    video: { type: String },
     priority: { type: String, enum: ['Low', 'Medium', 'High', 'Emergency'], default: 'Low' },
     status: {
       type: String,
@@ -31,6 +32,7 @@ const RequestSchema = new mongoose.Schema(
     notes: String,
     completionReport: String,
     completionImages: [String],
+    completionVideo: { type: String },
     invoiceUrl: String,
     costEstimate: Number,
     costActual: Number

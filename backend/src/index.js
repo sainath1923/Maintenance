@@ -31,6 +31,7 @@ const requestRoutes = require('./routes/requestRoutes');
 const userRoutes = require('./routes/userRoutes');
 const companyProfileRoutes = require('./routes/companyProfileRoutes');
 const stockRoutes = require('./routes/stockRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
 
 app.get('/', (req, res) => {
   res.json({ message: 'Building Maintenance Management API' });
@@ -41,6 +42,7 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/company-profile', companyProfileRoutes);
 app.use('/api/stocks', stockRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/maintenance_db';
