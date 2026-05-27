@@ -476,10 +476,11 @@ button {
   font-size: 13px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.9));
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
-
+.ticket_row_wrap{
+  background-color: #fee2e2 !important;
+}
 .ticket-row {
   display: flex;
   justify-content: space-between;
@@ -688,6 +689,66 @@ button {
   border-color: rgba(34, 197, 94, 0.9);
   color: #166534;
 }
+
+/* ── Request card grid ─────────────────────────────── */
+.request-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.request-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  padding: 14px;
+  font-size: 13px;
+  background: #fff;
+  gap: 10px;
+}
+
+.request-card.overdue {
+  background: #fee2e2;
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.request-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+@media (max-width: 1200px) {
+  .request-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .request-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 500px) {
+  .request-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* ────────────────────────────────────────────────── */
 
 @media (max-width: 900px) {
   .app-card {

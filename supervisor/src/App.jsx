@@ -187,11 +187,107 @@ function SupervisorDashboard({ onLogout }) {
   const [stockEntries, setStockEntries] = useState([]);
   const [stockRequests, setStockRequests] = useState([]);
   const [stockRequestsError, setStockRequestsError] = useState('');
+  const [viewMediaRequest, setViewMediaRequest] = useState(null);
 
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
 
   const token = localStorage.getItem('supervisor_token');
+
+  // Attendance state
+  const [attendanceToday, setAttendanceToday] = useState({ punchIn: null, punchOut: null });
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [attendanceError, setAttendanceError] = useState('');
+  const [attendanceMsg, setAttendanceMsg] = useState('');
+
+  const loadAttendanceToday = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceToday({ punchIn: data.punchIn, punchOut: data.punchOut });
+      }
+    } catch { /* ignore */ }
+  };
+
+  const doPunchIn = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-in`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched in successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch in failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const doPunchOut = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-out`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched out successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch out failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
   const fetchAssigned = async () => {
     setError('');
@@ -268,12 +364,47 @@ function SupervisorDashboard({ onLogout }) {
     }
   };
 
+  const supervisorReviewRequest = async (requestId, action) => {
+    setStockRequestsError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/stocks/requests/${requestId}/supervisor-approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStockRequestsError(data.message || 'Failed to update request');
+        return;
+      }
+      // Optimistically update the local state so the record stays visible
+      setStockRequests((prev) =>
+        prev.map((r) =>
+          r._id === requestId
+            ? { ...r, status: action === 'approve' ? 'SupervisorApproved' : 'SupervisorRejected' }
+            : r
+        )
+      );
+      notification.success({
+        message: action === 'approve' ? 'Request Approved' : 'Request Rejected',
+        description: action === 'approve'
+          ? 'Request forwarded to procurement.'
+          : 'Request has been rejected.',
+        placement: 'topRight',
+        duration: 3
+      });
+    } catch {
+      setStockRequestsError('Network error');
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchAssigned();
       fetchTechnicians();
       fetchStockEntries();
       fetchStockRequests();
+      loadAttendanceToday();
     }
   }, []);
 
@@ -438,15 +569,23 @@ function SupervisorDashboard({ onLogout }) {
             </div>
           </div>
           {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
-          <button
-            className="btn-outline btn-small"
-            onClick={() => {
-              localStorage.removeItem('supervisor_token');
-              onLogout();
-            }}
-          >
-            Logout
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn-outline btn-small"
+              onClick={() => { setShowAttendanceModal(true); loadAttendanceToday(); }}
+            >
+              {attendanceToday.punchIn && !attendanceToday.punchOut ? 'Punch Out' : attendanceToday.punchOut ? 'Attendance ✓' : 'Punch In'}
+            </button>
+            <button
+              className="btn-outline btn-small"
+              onClick={() => {
+                localStorage.removeItem('supervisor_token');
+                onLogout();
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="app-main">
@@ -492,11 +631,12 @@ function SupervisorDashboard({ onLogout }) {
               </div>
               {error && <p className="text-danger">{error}</p>}
               {infoMessage && <p className="text-success">{infoMessage}</p>}
-              <ul className="list-scroll">
-                {requests.map((r) => (
-                  <li key={r._id}>
-                    <div className="ticket-row">
-                      <div className="ticket-main">
+              <div className="request-grid">
+                {requests.map((r) => {
+                  const isOverdueUnassigned = !r.technician && (Date.now() - new Date(r.createdAt)) > 1 * 60 * 1000;
+                  return (
+                    <div key={r._id} className={`request-card${isOverdueUnassigned ? ' overdue' : ''}`}>
+                      <div className="request-card-body">
                         <div className="ticket-header-row">
                           <div className="ticket-title">{r.title}</div>
                           <span
@@ -511,15 +651,13 @@ function SupervisorDashboard({ onLogout }) {
                           </span>
                         </div>
                         <div className="ticket-subline">
-                          <span className="ticket-label">Flat</span> {r.flatNumber || '-'},
-                          {' '}
+                          <span className="ticket-label">Flat</span> {r.flatNumber || '-'},{' '}
                           {r.block || 'No block'}
                         </div>
                         <div className="ticket-subline">
                           <span className="ticket-label">Type:</span> {r.requestType || '-'} ·{' '}
-                          <span className="ticket-label">Category:</span> {r.maintenanceCategory ||
-                            '-'}{' '}
-                          · <span className="ticket-label">Priority:</span> {r.priority}
+                          <span className="ticket-label">Category:</span> {r.maintenanceCategory || '-'} ·{' '}
+                          <span className="ticket-label">Priority:</span> {r.priority}
                         </div>
                         {r.technician && (
                           <div className="ticket-subline">
@@ -582,7 +720,7 @@ function SupervisorDashboard({ onLogout }) {
                           </div>
                         )}
                       </div>
-                      <div className="ticket-actions">
+                      <div className="request-card-actions">
                         <button
                           className="btn-small btn-primary"
                           type="button"
@@ -599,9 +737,9 @@ function SupervisorDashboard({ onLogout }) {
                         </button>
                       </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -807,7 +945,7 @@ function SupervisorDashboard({ onLogout }) {
             <div className="card">
               <div className="card-header-row">
                 <div className="card-title">Technician Item Requests</div>
-                <span className="chip">{stockRequests.length} requests</span>
+                <span className="chip">{stockRequests.filter((r) => r.status === 'Pending').length} pending</span>
               </div>
               {stockRequestsError && <p className="text-danger">{stockRequestsError}</p>}
               <div className="stocks-table-wrap">
@@ -816,19 +954,21 @@ function SupervisorDashboard({ onLogout }) {
                     <tr>
                       <th>Category</th>
                       <th>Item</th>
+                      <th>Image/Video</th>
                       <th>Quantity</th>
                       <th>Tenant</th>
                       <th>Requested By</th>
                       <th>Comments</th>
+                      <th>Requested On</th>
                       <th>Status</th>
-                      <th>Approved On</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stockRequests.length === 0 && (
                       <tr>
-                        <td colSpan="8" className="stocks-empty-row">
-                          No item requests raised yet.
+                        <td colSpan="10" className="stocks-empty-row">
+                          No pending item requests.
                         </td>
                       </tr>
                     )}
@@ -836,6 +976,19 @@ function SupervisorDashboard({ onLogout }) {
                       <tr key={request._id}>
                         <td>{request.category}</td>
                         <td>{request.item}</td>
+                        <td>
+                          {(request.requestImages?.length > 0 || request.requestVideo) ? (
+                            <button
+                              className="btn-small btn-outline"
+                              type="button"
+                              onClick={() => setViewMediaRequest(request)}
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
                         <td>{request.quantity}</td>
                         <td>
                           {request.tenantFlatNumber
@@ -844,8 +997,45 @@ function SupervisorDashboard({ onLogout }) {
                         </td>
                         <td>{request.requestedBy?.name || '-'}</td>
                         <td>{request.comments || '-'}</td>
-                        <td>{request.status}</td>
-                        <td>{request.approvedAt ? new Date(request.approvedAt).toLocaleString() : '-'}</td>
+                        <td>{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '-'}</td>
+                        <td>
+                          <span className={'status-pill status-' +
+                            (request.status === 'SupervisorApproved' ? 'approved'
+                              : request.status === 'SupervisorRejected' ? 'rejected'
+                              : request.status === 'Delivered' ? 'completed'
+                              : request.status === 'Dispatched' ? 'in-progress'
+                              : request.status === 'Approved' ? 'approved'
+                              : request.status === 'ProcurementRequested' ? 'in-progress'
+                              : 'pending')}>
+                            {request.status === 'SupervisorApproved' ? 'Approved'
+                              : request.status === 'SupervisorRejected' ? 'Rejected'
+                              : request.status === 'Delivered' ? 'Delivered'
+                              : request.status === 'Dispatched' ? 'Dispatched'
+                              : request.status === 'Approved' ? 'Stores Approved'
+                              : request.status === 'ProcurementRequested' ? 'Procurement'
+                              : 'Pending'}
+                          </span>
+                        </td>
+                        <td style={{ display: 'flex', gap: '6px' }}>
+                          {request.status === 'Pending' && (
+                            <>
+                              <button
+                                className="btn-small btn-primary"
+                                type="button"
+                                onClick={() => supervisorReviewRequest(request._id, 'approve')}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                className="btn-small btn-outline"
+                                type="button"
+                                onClick={() => supervisorReviewRequest(request._id, 'reject')}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -855,6 +1045,52 @@ function SupervisorDashboard({ onLogout }) {
           )}
         </div>
       </div>
+      {viewMediaRequest && (
+        <div
+          onClick={() => setViewMediaRequest(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 400,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '860px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}
+          >
+            {viewMediaRequest.requestImages?.map((src, i) => (
+              <img
+                key={i}
+                src={`${API_BASE}${src}`}
+                alt={`photo ${i + 1}`}
+                style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '10px', objectFit: 'contain', display: 'block' }}
+              />
+            ))}
+            {viewMediaRequest.requestVideo && (
+              <video
+                src={`${API_BASE}${viewMediaRequest.requestVideo}`}
+                controls
+                autoPlay
+                style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: '10px', display: 'block' }}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setViewMediaRequest(null)}
+              style={{
+                marginTop: '8px', padding: '8px 28px',
+                background: 'rgba(255,255,255,0.15)', color: '#fff',
+                border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px',
+                cursor: 'pointer', fontSize: '14px'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {drawerRequestId && (
         <div className="drawer-backdrop" onClick={() => setDrawerRequestId(null)}>
           <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
@@ -972,6 +1208,23 @@ function SupervisorDashboard({ onLogout }) {
                           <div className="text-muted">Comments</div>
                           <div className="text-muted">{r.description || '-'}</div>
                         </div>
+                        {(r.images?.length > 0 || r.video) && (
+                          <div className="detail-item" style={{ flexBasis: '100%' }}>
+                            <div className="text-muted">Attachments</div>
+                            {r.images?.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: r.video ? '8px' : '0' }}>
+                                {r.images.map((src, i) => (
+                                  <a key={i} href={`${API_BASE}${src}`} target="_blank" rel="noreferrer">
+                                    <img src={`${API_BASE}${src}`} alt={`photo ${i + 1}`} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {r.video && (
+                              <video src={`${API_BASE}${r.video}`} controls style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', display: 'block' }} />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -1115,6 +1368,50 @@ function SupervisorDashboard({ onLogout }) {
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {showAttendanceModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px 24px', minWidth: '320px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight: 700, fontSize: '18px', marginBottom: '4px' }}>Attendance</div>
+            <div style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch In</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchIn
+                    ? <span style={{ color: '#16a34a', fontWeight: 600 }}>{new Date(attendanceToday.punchIn).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch Out</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchOut
+                    ? <span style={{ color: '#dc2626', fontWeight: 600 }}>{new Date(attendanceToday.punchOut).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+            </div>
+            {attendanceError && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '10px' }}>{attendanceError}</p>}
+            {attendanceMsg && <p style={{ color: '#16a34a', fontSize: '13px', marginBottom: '10px' }}>{attendanceMsg}</p>}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {!attendanceToday.punchIn && (
+                <button className="btn-primary btn-small" onClick={doPunchIn} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch In'}
+                </button>
+              )}
+              {attendanceToday.punchIn && !attendanceToday.punchOut && (
+                <button className="btn-primary btn-small" onClick={doPunchOut} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch Out'}
+                </button>
+              )}
+              <button className="btn-outline btn-small" onClick={() => { setShowAttendanceModal(false); setAttendanceError(''); setAttendanceMsg(''); }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
