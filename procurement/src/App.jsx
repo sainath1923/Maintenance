@@ -175,6 +175,101 @@ function ProcurementDashboard({ onLogout }) {
   const buildingName = useBuildingName();
   const token = localStorage.getItem('procurement_token');
 
+  // Attendance state
+  const [attendanceToday, setAttendanceToday] = useState({ punchIn: null, punchOut: null });
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [attendanceError, setAttendanceError] = useState('');
+  const [attendanceMsg, setAttendanceMsg] = useState('');
+
+  const loadAttendanceToday = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceToday({ punchIn: data.punchIn, punchOut: data.punchOut });
+      }
+    } catch { /* ignore */ }
+  };
+
+  const doPunchIn = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-in`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched in successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch in failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const doPunchOut = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-out`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched out successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch out failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   const categoryOptions = useMemo(() => Object.keys(stockItemsByCategory), [stockItemsByCategory]);
   const itemOptions = selectedCategory ? stockItemsByCategory[selectedCategory] || [] : [];
   const formatCurrency = (value) => Number(value || 0).toFixed(2);
@@ -336,6 +431,7 @@ function ProcurementDashboard({ onLogout }) {
   useEffect(() => {
     if (token) {
       fetchAll();
+      loadAttendanceToday();
     }
   }, [token]);
 
@@ -417,30 +513,30 @@ function ProcurementDashboard({ onLogout }) {
     }
   };
 
-  const approveRequest = async (requestId) => {
+  const forwardToStores = async (requestId) => {
     setError('');
     setInfoMessage('');
     try {
-      const res = await fetch(`${API_BASE}/api/stocks/requests/${requestId}/approve`, {
+      const res = await fetch(`${API_BASE}/api/stocks/requests/${requestId}/procurement-forward`, {
         method: 'PATCH',
         headers
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.message || 'Failed to approve request');
+        setError(data.message || 'Failed to forward request');
         return;
       }
 
       notification.success({
-        message: 'Request Approved',
-        description: 'Request approved successfully!',
+        message: 'Forwarded to Stores',
+        description: 'Request has been forwarded to stores for fulfilment.',
         placement: 'topRight',
         duration: 3
       });
       setInfoMessage('');
-      await Promise.all([fetchRequests(), fetchEntries()]);
+      await fetchRequests();
     } catch {
-      setError('Network error while approving request');
+      setError('Network error while forwarding request');
     }
   };
 
@@ -661,15 +757,23 @@ function ProcurementDashboard({ onLogout }) {
             </div>
           </div>
           {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
-          <button
-            className="btn-outline btn-small"
-            onClick={() => {
-              localStorage.removeItem('procurement_token');
-              onLogout();
-            }}
-          >
-            Logout
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              className="btn-outline btn-small"
+              onClick={() => { setShowAttendanceModal(true); loadAttendanceToday(); }}
+            >
+              {attendanceToday.punchIn && !attendanceToday.punchOut ? 'Punch Out' : attendanceToday.punchOut ? 'Attendance ✓' : 'Punch In'}
+            </button>
+            <button
+              className="btn-outline btn-small"
+              onClick={() => {
+                localStorage.removeItem('procurement_token');
+                onLogout();
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         <div className="app-main">
@@ -680,13 +784,6 @@ function ProcurementDashboard({ onLogout }) {
               onClick={() => setActiveTab('dashboard')}
             >
               Dashboard
-            </button>
-            <button
-              type="button"
-              className={'tab-button' + (activeTab === 'stock-items' ? ' active' : '')}
-              onClick={() => setActiveTab('stock-items')}
-            >
-              Stock Items
             </button>
             <button
               type="button"
@@ -770,151 +867,13 @@ function ProcurementDashboard({ onLogout }) {
             </div>
           )}
 
-          {activeTab === 'stock-items' && (
-            <div className="card">
-              <div className="card-header-row">
-                <div className="card-title">Add / Update Stock Items</div>
-                <span className="chip">{stockEntries.length} items</span>
-              </div>
-
-              {editingEntryId && (
-                <div className="edit-banner">
-                  <span>Editing selected stock item</span>
-                  <button className="btn-outline btn-small" type="button" onClick={resetStockForm}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              <div className="form-grid">
-                <div className="field">
-                  <label>Category</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value);
-                      setSelectedItem('');
-                    }}
-                    disabled={loading || Boolean(editingEntryId)}
-                  >
-                    <option value="">Select category</option>
-                    {categoryOptions.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label>Item</label>
-                  <select
-                    value={selectedItem}
-                    onChange={(e) => setSelectedItem(e.target.value)}
-                    disabled={!selectedCategory || loading || Boolean(editingEntryId)}
-                  >
-                    <option value="">Select item</option>
-                    {itemOptions.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="field">
-                  <label>Quantity</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="Enter quantity"
-                  />
-                </div>
-
-                <div className="field">
-                  <label>Price</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Enter amount"
-                  />
-                </div>
-
-                <div className="field">
-                  <label>Updated On</label>
-                  <input
-                    type="date"
-                    value={updatedOn}
-                    onChange={(e) => setUpdatedOn(e.target.value)}
-                  />
-                </div>
-
-                <div className="field field-submit">
-                  <label>&nbsp;</label>
-                  <button className="btn-primary" type="button" onClick={submitStockItem}>
-                    {editingEntryId ? 'Update' : 'Submit'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Item</th>
-                      <th>Quantity</th>
-                      <th>Item Price</th>
-                      <th>Total Price</th>
-                      <th>Updated On</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockEntries.length === 0 && (
-                      <tr>
-                        <td colSpan="8" className="muted-cell">
-                          No stock items available.
-                        </td>
-                      </tr>
-                    )}
-                    {stockEntries.map((entry) => (
-                      <tr key={entry._id}>
-                        <td>{entry.category}</td>
-                        <td>{entry.item}</td>
-                        <td>{entry.quantity ?? 0}</td>
-                        <td>{formatCurrency(entry.price)}</td>
-                        <td>{formatCurrency(Number(entry.quantity || 0) * Number(entry.price || 0))}</td>
-                        <td>{entry.updatedOn ? new Date(entry.updatedOn).toLocaleDateString() : '-'}</td>
-                        <td>{Number(entry.quantity || 0) > 0 ? 'Available' : 'Not Available'}</td>
-                        <td>
-                          <button
-                            className="btn-small btn-outline"
-                            type="button"
-                            onClick={() => startEditingEntry(entry)}
-                          >
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
           {activeTab === 'requests' && (
             <div className="card">
               <div className="card-header-row">
-                <div className="card-title">Technician Item Requests</div>
-                <span className="chip">{stockRequests.length} requests</span>
+                <div className="card-title">Item Requests</div>
+                <span className="chip">
+                  {stockRequests.filter((r) => ['SupervisorApproved', 'ProcurementRequested', 'Approved'].includes(r.status)).length} requests
+                </span>
               </div>
 
               <div className="table-wrap">
@@ -926,53 +885,66 @@ function ProcurementDashboard({ onLogout }) {
                       <th>Quantity</th>
                       <th>Tenant</th>
                       <th>Requested By</th>
+                      <th>Requested On</th>
                       <th>Comments</th>
                       <th>Status</th>
-                      <th>Approved On</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stockRequests.length === 0 && (
+                    {stockRequests.filter((r) => ['SupervisorApproved', 'ProcurementRequested', 'Approved'].includes(r.status)).length === 0 && (
                       <tr>
                         <td colSpan="9" className="muted-cell">
-                          No item requests raised yet.
+                          No item requests yet.
                         </td>
                       </tr>
                     )}
-                    {stockRequests.map((request) => (
-                      <tr key={request._id}>
-                        <td>{request.category}</td>
-                        <td>{request.item}</td>
-                        <td>{request.quantity}</td>
-                        <td>
-                          {request.tenantFlatNumber
-                            ? `Flat ${request.tenantFlatNumber}${request.tenantBlock ? `, Block ${request.tenantBlock}` : ''}`
-                            : '-'}
-                        </td>
-                        <td>{request.requestedBy?.name || '-'}</td>
-                        <td>{request.comments || '-'}</td>
-                        <td>{request.status}</td>
-                        <td>
-                          {request.approvedAt
-                            ? new Date(request.approvedAt).toLocaleString()
-                            : '-'}
-                        </td>
-                        <td>
-                          {request.status === 'Pending' ? (
-                            <button
-                              className="btn-small btn-primary"
-                              type="button"
-                              onClick={() => approveRequest(request._id)}
-                            >
-                              Approve
-                            </button>
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {stockRequests
+                      .filter((r) => ['SupervisorApproved', 'ProcurementRequested', 'Approved'].includes(r.status))
+                      .map((request) => {
+                        const statusLabel =
+                          request.status === 'SupervisorApproved'
+                            ? 'New'
+                            : request.status === 'ProcurementRequested'
+                            ? 'Pending'
+                            : 'Approved';
+                        return (
+                          <tr key={request._id}>
+                            <td>{request.category}</td>
+                            <td>{request.item}</td>
+                            <td>{request.quantity}</td>
+                            <td>
+                              {request.tenantFlatNumber
+                                ? `Flat ${request.tenantFlatNumber}${request.tenantBlock ? `, Block ${request.tenantBlock}` : ''}`
+                                : '-'}
+                            </td>
+                            <td>{request.requestedBy?.name || '-'}</td>
+                            <td>{request.createdAt ? new Date(request.createdAt).toLocaleDateString() : '-'}</td>
+                            <td>{request.comments || '-'}</td>
+                            <td>
+                              <span
+                                className={
+                                  'status-pill ' +
+                                  `status-${statusLabel.toLowerCase()}`
+                                }
+                              >
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td>
+                              {request.status === 'SupervisorApproved' && (
+                                <button
+                                  className="btn-small btn-primary"
+                                  type="button"
+                                  onClick={() => forwardToStores(request._id)}
+                                >
+                                  Forward to Stores
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -980,6 +952,50 @@ function ProcurementDashboard({ onLogout }) {
           )}
         </div>
       </div>
+
+      {showAttendanceModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px 24px', minWidth: '320px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight: 700, fontSize: '18px', marginBottom: '4px' }}>Attendance</div>
+            <div style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch In</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchIn
+                    ? <span style={{ color: '#16a34a', fontWeight: 600 }}>{new Date(attendanceToday.punchIn).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch Out</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchOut
+                    ? <span style={{ color: '#dc2626', fontWeight: 600 }}>{new Date(attendanceToday.punchOut).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+            </div>
+            {attendanceError && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '10px' }}>{attendanceError}</p>}
+            {attendanceMsg && <p style={{ color: '#16a34a', fontSize: '13px', marginBottom: '10px' }}>{attendanceMsg}</p>}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {!attendanceToday.punchIn && (
+                <button className="btn-primary btn-small" onClick={doPunchIn} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch In'}
+                </button>
+              )}
+              {attendanceToday.punchIn && !attendanceToday.punchOut && (
+                <button className="btn-primary btn-small" onClick={doPunchOut} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch Out'}
+                </button>
+              )}
+              <button className="btn-outline btn-small" onClick={() => { setShowAttendanceModal(false); setAttendanceError(''); setAttendanceMsg(''); }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
