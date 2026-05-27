@@ -258,8 +258,9 @@ button {
 }
 
 .list-scroll {
-  max-height: 260px;
-  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   margin: 0;
   padding-left: 0;
   list-style: none;
@@ -267,19 +268,30 @@ button {
 
 .list-scroll li {
   padding: 10px 12px;
-  margin-bottom: 8px;
   font-size: 13px;
   border-radius: 14px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   background: linear-gradient(135deg, rgba(239, 246, 255, 0.9), rgba(219, 234, 254, 0.9));
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
- 
+
+@media (max-width: 1024px) {
+  .list-scroll {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .list-scroll {
+    grid-template-columns: 1fr;
+  }
+}
+
 .ticket-row {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
 }
 
 .ticket-main {
@@ -290,8 +302,9 @@ button {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
+  margin-top: auto;
 }
 
 .ticket-header-row {

@@ -153,6 +153,14 @@ function Login({ onLoggedIn }) {
   );
 }
 
+function parseJwt(token) {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return {};
+  }
+}
+
 function TechnicianDashboard({ onLogout }) {
   const [requests, setRequests] = useState([]);
   const [raisedRequests, setRaisedRequests] = useState([]);
@@ -162,15 +170,17 @@ function TechnicianDashboard({ onLogout }) {
   const [drawerRequestId, setDrawerRequestId] = useState(null);
   const [editingDrawerCommentId, setEditingDrawerCommentId] = useState(null);
   const [uploadingInvoiceId, setUploadingInvoiceId] = useState(null);
+  const [uploadingCompletionId, setUploadingCompletionId] = useState(null);
+  const [completionUploadError, setCompletionUploadError] = useState('');
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [activeTab, setActiveTab] = useState('tickets'); // 'tickets' | 'stocks' | 'raised'
   const [raisedError, setRaisedError] = useState('');
-  // Fetch requests raised by this technician (as tenant)
+  // Fetch stock requests raised by this technician
   const fetchRaisedRequests = async () => {
     setRaisedError('');
     try {
-      const res = await fetch(`${API_BASE}/api/requests/me`, {
+      const res = await fetch(`${API_BASE}/api/stocks/requests`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.status === 401) {
@@ -214,6 +224,102 @@ function TechnicianDashboard({ onLogout }) {
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
   const token = localStorage.getItem('technician_token');
+  const currentUser = parseJwt(token);
+
+  // Attendance state
+  const [attendanceToday, setAttendanceToday] = useState({ punchIn: null, punchOut: null });
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [attendanceError, setAttendanceError] = useState('');
+  const [attendanceMsg, setAttendanceMsg] = useState('');
+
+  const loadAttendanceToday = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/attendance/today`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendanceToday({ punchIn: data.punchIn, punchOut: data.punchOut });
+      }
+    } catch { /* ignore */ }
+  };
+
+  const doPunchIn = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-in`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched in successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch in failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const doPunchOut = () => {
+    setAttendanceBusy(true);
+    setAttendanceError('');
+    setAttendanceMsg('');
+    if (!navigator.geolocation) {
+      setAttendanceError('Geolocation is not supported by this browser.');
+      setAttendanceBusy(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/attendance/punch-out`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setAttendanceMsg('Punched out successfully!');
+            await loadAttendanceToday();
+          } else {
+            setAttendanceError(data.message || 'Punch out failed.');
+          }
+        } catch {
+          setAttendanceError('Network error.');
+        } finally {
+          setAttendanceBusy(false);
+        }
+      },
+      () => {
+        setAttendanceError('Could not get your location. Please allow location access.');
+        setAttendanceBusy(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
 
   const fetchMyJobs = async () => {
     setError('');
@@ -274,6 +380,7 @@ function TechnicianDashboard({ onLogout }) {
       fetchStockEntries();
       fetchTenants();
       fetchRaisedRequests();
+      loadAttendanceToday();
     }
   }, []);
 
@@ -413,6 +520,43 @@ function TechnicianDashboard({ onLogout }) {
     }
   };
 
+  const uploadCompletionMedia = async (id, files) => {
+    if (!files || files.length === 0) return;
+    setCompletionUploadError('');
+    setUploadingCompletionId(id);
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          formData.append('images', file);
+        } else if (file.type.startsWith('video/')) {
+          formData.append('video', file);
+        }
+      }
+      const res = await fetch(`${API_BASE}/api/requests/${id}/completion-media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCompletionUploadError(data.message || 'Upload failed');
+        return;
+      }
+      await fetchMyJobs();
+      notification.success({
+        message: 'Uploaded',
+        description: 'Fix proof uploaded successfully!',
+        placement: 'topRight',
+        duration: 3
+      });
+    } catch {
+      setCompletionUploadError('Network error');
+    } finally {
+      setUploadingCompletionId(null);
+    }
+  };
+
   return (
     <div className="app-shell">
       <div className="app-card">
@@ -431,15 +575,28 @@ function TechnicianDashboard({ onLogout }) {
             </div>
           </div>
           {/* {buildingName && <div className="header-building-name">{buildingName}</div>} */}
-          <button
-            className="btn-outline btn-small"
-            onClick={() => {
-              localStorage.removeItem('technician_token');
-              onLogout();
-            }}
-          >
-            Logout
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+            {currentUser.name && (
+              <span style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{currentUser.name}</span>
+            )}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="btn-outline btn-small"
+                onClick={() => { setShowAttendanceModal(true); loadAttendanceToday(); }}
+              >
+                {attendanceToday.punchIn && !attendanceToday.punchOut ? 'Punch Out' : attendanceToday.punchOut ? 'Attendance ✓' : 'Punch In'}
+              </button>
+              <button
+                className="btn-outline btn-small"
+                onClick={() => {
+                  localStorage.removeItem('technician_token');
+                  onLogout();
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="app-main">
@@ -477,35 +634,39 @@ function TechnicianDashboard({ onLogout }) {
                 <table className="stocks-table">
                   <thead>
                     <tr>
-                      <th>Title</th>
-                      <th>Flat</th>
                       <th>Category</th>
-                      <th>Priority</th>
+                      <th>Item</th>
+                      <th>Quantity</th>
+                      <th>Tenant</th>
+                      <th>Comments</th>
                       <th>Status</th>
-                      <th>Created</th>
+                      <th>Raised On</th>
                     </tr>
                   </thead>
                   <tbody>
                     {raisedRequests.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="stocks-empty-row">
+                        <td colSpan="7" className="stocks-empty-row">
                           No requests raised yet.
                         </td>
                       </tr>
                     )}
                     {raisedRequests.map((r) => (
                       <tr key={r._id}>
-                        <td>{r.title}</td>
-                        <td>{r.flatNumber || '-'}{r.block ? `, ${r.block}` : ''}</td>
-                        <td>{r.maintenanceCategory || '-'}</td>
-                        <td>{r.priority}</td>
+                        <td>{r.category}</td>
+                        <td>{r.item}</td>
+                        <td>{r.quantity}</td>
+                        <td>
+                          {r.tenantFlatNumber
+                            ? `Flat ${r.tenantFlatNumber}${r.tenantBlock ? `, Block ${r.tenantBlock}` : ''}`
+                            : '-'}
+                        </td>
+                        <td>{r.comments || '-'}</td>
                         <td>
                           <span
                             className={
                               'status-pill ' +
-                              `status-${(r.status || '')
-                                .toLowerCase()
-                                .replace(/\s+/g, '-')}`
+                              `status-${(r.status || '').toLowerCase().replace(/\s+/g, '-')}`
                             }
                           >
                             {r.status}
@@ -829,6 +990,63 @@ function TechnicianDashboard({ onLogout }) {
                           <div className="text-muted">Description</div>
                           <div className="text-muted">{r.description || '-'}</div>
                         </div>
+                        {(r.images?.length > 0 || r.video) && (
+                          <div className="detail-item" style={{ flexBasis: '100%' }}>
+                            <div className="text-muted">Attachments</div>
+                            {r.images?.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: r.video ? '8px' : '0' }}>
+                                {r.images.map((src, i) => (
+                                  <a key={i} href={`${API_BASE}${src}`} target="_blank" rel="noreferrer">
+                                    <img src={`${API_BASE}${src}`} alt={`photo ${i + 1}`} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {r.video && (
+                              <video src={`${API_BASE}${r.video}`} controls style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', display: 'block' }} />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="drawer-section-title">Fix Proof</div>
+                      {(r.completionImages?.length > 0 || r.completionVideo) && (
+                        <div style={{ marginBottom: '10px' }}>
+                          {r.completionImages?.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: r.completionVideo ? '8px' : '0' }}>
+                              {r.completionImages.map((src, i) => (
+                                <a key={i} href={`${API_BASE}${src}`} target="_blank" rel="noreferrer">
+                                  <img src={`${API_BASE}${src}`} alt={`fix proof ${i + 1}`} style={{ width: '72px', height: '72px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-subtle)' }} />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                          {r.completionVideo && (
+                            <video src={`${API_BASE}${r.completionVideo}`} controls style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '6px', display: 'block' }} />
+                          )}
+                        </div>
+                      )}
+                      {completionUploadError && drawerRequestId === r._id && (
+                        <p className="text-danger">{completionUploadError}</p>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <label className="btn-small btn-outline file-upload-button">
+                          {uploadingCompletionId === r._id ? 'Uploading...' : 'Upload fix proof'}
+                          <input
+                            type="file"
+                            accept="image/*,video/*"
+                            multiple
+                            disabled={uploadingCompletionId === r._id}
+                            onChange={(e) => {
+                              const files = e.target.files ? Array.from(e.target.files) : [];
+                              if (files.length > 0) {
+                                uploadCompletionMedia(r._id, files);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                     </div>
                     <div>
@@ -938,6 +1156,50 @@ function TechnicianDashboard({ onLogout }) {
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {showAttendanceModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px 24px', minWidth: '320px', maxWidth: '90vw', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight: 700, fontSize: '18px', marginBottom: '4px' }}>Attendance</div>
+            <div style={{ color: '#6b7280', fontSize: '13px', marginBottom: '20px' }}>{new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch In</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchIn
+                    ? <span style={{ color: '#16a34a', fontWeight: 600 }}>{new Date(attendanceToday.punchIn).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ width: '90px', color: '#374151', fontWeight: 600, fontSize: '13px' }}>Punch Out</span>
+                <span style={{ fontSize: '14px' }}>
+                  {attendanceToday.punchOut
+                    ? <span style={{ color: '#dc2626', fontWeight: 600 }}>{new Date(attendanceToday.punchOut).toLocaleTimeString()}</span>
+                    : <span style={{ color: '#9ca3af' }}>Not recorded</span>}
+                </span>
+              </div>
+            </div>
+            {attendanceError && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '10px' }}>{attendanceError}</p>}
+            {attendanceMsg && <p style={{ color: '#16a34a', fontSize: '13px', marginBottom: '10px' }}>{attendanceMsg}</p>}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {!attendanceToday.punchIn && (
+                <button className="btn-primary btn-small" onClick={doPunchIn} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch In'}
+                </button>
+              )}
+              {attendanceToday.punchIn && !attendanceToday.punchOut && (
+                <button className="btn-primary btn-small" onClick={doPunchOut} disabled={attendanceBusy}>
+                  {attendanceBusy ? 'Please wait…' : 'Punch Out'}
+                </button>
+              )}
+              <button className="btn-outline btn-small" onClick={() => { setShowAttendanceModal(false); setAttendanceError(''); setAttendanceMsg(''); }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
