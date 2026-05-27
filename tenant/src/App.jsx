@@ -8,6 +8,9 @@ const API_BASE =
     ? 'http://localhost:5000'
     : '');
 
+const RATING_URL =
+  'https://www.google.com/search?q=bhr+properties&oq=bhr+properties&gs_lcrp=EgZjaHJvbWUqBwgAEAAYgAQyBwgAEAAYgAQyBwgBEAAYgAQyCAgCEAAYFhgeMggIAxAAGBYYHjIICAQQABgWGB4yCAgFEAAYFhgeMggIBhAAGBYYHjIICAcQABgWGB4yCAgIEAAYFhgeMg0ICRAAGIYDGIAEGIoF0gEINDc0OWowajeoAgCwAgA&sourceid=chrome&ie=UTF-8#sv=CAwSrwIKBmxjbF9wdhI5CgNwdnESMkNnMHZaeTh4TVdKaWQzZDBkbTVpSWhRS0RtSm9jaUJ3Y205d1pYSjBhV1Z6RUFJWUF3EqwBCgNscWkSpAFDZzVpYUhJZ2NISnZjR1Z5ZEdsbGMwaUsxZk85cTZxQWdBaGFGaEFBRUFFWUFTSU9ZbWh5SUhCeWIzQmxjblJwWlhPU0FSbHlaV0ZzWDJWemRHRjBaVjl5Wlc1MFlXeGZZV2RsYm1ONW1nRWpRMmhhUkZOVmFFNU1Semx1VXpCV1NsUXdSbTVUVlZKRFdqTldSVk5yZUZKRlFVWDZBUVFJQUJBNRISCgN0YnMSC2xyZjohM3NJQUU9EhMKAXESDmJociBwcm9wZXJ0aWVzGhJsb2NhbC1wbGFjZS12aWV3ZXIYCiD82a_kDA';
+
 function useCompanyLogo() {
   const [logo, setLogo] = useState('');
 
@@ -165,10 +168,17 @@ function TenantDashboard({ onLogout }) {
   const [mobileNumber, setMobileNumber] = useState('');
   const [preferredTime, setPreferredTime] = useState('Any time');
   const [error, setError] = useState('');
+  const [mediaImages, setMediaImages] = useState([]);
+  const [mediaVideo, setMediaVideo] = useState(null);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const imageInputRef = React.useRef(null);
+  const videoInputRef = React.useRef(null);
   // Remove local success state, use antd notification instead
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastSnapshot, setLastSnapshot] = useState(null);
   const [activeTab, setActiveTab] = useState('raise'); // 'raise' | 'view'
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   const companyLogo = useCompanyLogo();
   const buildingName = useBuildingName();
@@ -187,6 +197,19 @@ function TenantDashboard({ onLogout }) {
         return;
       }
       setRequests(data);
+
+      // Auto-show rating modal for completed requests (once per session per request)
+      const shownIds = JSON.parse(sessionStorage.getItem('rated_requests') || '[]');
+      const newlyCompleted = data.filter(
+        (r) => r.status === 'Completed' && !shownIds.includes(r._id)
+      );
+      if (newlyCompleted.length > 0) {
+        sessionStorage.setItem(
+          'rated_requests',
+          JSON.stringify([...shownIds, ...newlyCompleted.map((r) => r._id)])
+        );
+        setShowRatingModal(true);
+      }
 
       setLastSnapshot((prevSnapshot) => {
         const nextSnapshot = {};
@@ -221,6 +244,35 @@ function TenantDashboard({ onLogout }) {
     return () => clearInterval(intervalId);
   }, [token]);
 
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setMediaImages(files);
+    const previews = files.map((f) => URL.createObjectURL(f));
+    setImagePreviews((prev) => { prev.forEach((url) => URL.revokeObjectURL(url)); return previews; });
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setMediaVideo(file);
+    setVideoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return file ? URL.createObjectURL(file) : null; });
+  };
+
+  const removeImage = (index) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    const newFiles = mediaImages.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    setMediaImages(newFiles);
+    setImagePreviews(newPreviews);
+    if (newFiles.length === 0 && imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const removeVideo = () => {
+    if (videoPreview) URL.revokeObjectURL(videoPreview);
+    setMediaVideo(null);
+    setVideoPreview(null);
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
@@ -228,26 +280,34 @@ function TenantDashboard({ onLogout }) {
       requestType === 'maintenance' && !title
         ? `${maintenanceType} maintenance`
         : title;
+    if (!effectiveTitle.trim()) {
+      setError('Title is required');
+      return;
+    }
+    if (!mobileNumber.trim()) {
+      setError('Mobile number is required');
+      return;
+    }
     try {
+      const formData = new FormData();
+      formData.append('title', effectiveTitle);
+      formData.append('description', description);
+      formData.append('priority', priority);
+      formData.append('block', block);
+      formData.append('flatNumber', flatNumber);
+      formData.append('mobileNumber', mobileNumber);
+      formData.append('preferredVisitSlot', preferredTime);
+      formData.append('requestType', requestType);
+      if (requestType === 'maintenance') formData.append('maintenanceCategory', maintenanceType);
+      mediaImages.forEach((f) => formData.append('images', f));
+      if (mediaVideo) formData.append('video', mediaVideo);
+
       const res = await fetch(`${API_BASE}/api/requests`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title: effectiveTitle,
-          description,
-          priority,
-          block,
-          flatNumber,
-          mobileNumber,
-          preferredVisitSlot: preferredTime,
-          requestType,
-          maintenanceCategory: requestType === 'maintenance' ? maintenanceType : null,
-          apartment: null,
-          category: null
-        })
+        body: formData
       });
       const data = await res.json();
       if (!res.ok) {
@@ -256,6 +316,12 @@ function TenantDashboard({ onLogout }) {
       }
       setTitle('');
       setDescription('');
+      setMediaImages([]);
+      setMediaVideo(null);
+      setImagePreviews((prev) => { prev.forEach((u) => URL.revokeObjectURL(u)); return []; });
+      setVideoPreview((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+      if (imageInputRef.current) imageInputRef.current.value = '';
+      if (videoInputRef.current) videoInputRef.current.value = '';
       notification.success({
         message: 'Request Submitted',
         description: 'Your request has been submitted successfully!',
@@ -401,7 +467,7 @@ function TenantDashboard({ onLogout }) {
                 {requestType === 'request' && (
                   <div className="field">
                     <label>Title</label>
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} />
+                    <input required value={title} onChange={(e) => setTitle(e.target.value)} />
                   </div>
                 )}
                 <div className="field" style={{ flex: '1 1 100%' }}>
@@ -412,6 +478,67 @@ function TenantDashboard({ onLogout }) {
                     onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
+
+                <div className="field" style={{ flex: '1 1 100%' }}>
+                  <label>Photos <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.85em' }}>(optional, up to 5)</span></label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                    id="tenant-image-upload"
+                  />
+                  <label htmlFor="tenant-image-upload" className="btn-outline btn-small" style={{ display: 'inline-block', cursor: 'pointer', marginBottom: '8px' }}>
+                    Choose photos
+                  </label>
+                  {imagePreviews.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                      {imagePreviews.map((src, i) => (
+                        <div key={i} style={{ position: 'relative' }}>
+                          <img src={src} alt="preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-subtle)' }} />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(i)}
+                            style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', lineHeight: '20px', textAlign: 'center', padding: 0 }}
+                          >×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="field" style={{ flex: '1 1 100%' }}>
+                  <label>Video <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.85em' }}>(optional)</span></label>
+                  <input
+                    ref={videoInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoChange}
+                    style={{ display: 'none' }}
+                    id="tenant-video-upload"
+                  />
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label htmlFor="tenant-video-upload" className="btn-outline btn-small" style={{ display: 'inline-block', cursor: 'pointer' }}>
+                      Upload / Record video
+                    </label>
+                    {mediaVideo && (
+                      <span style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>{mediaVideo.name}</span>
+                    )}
+                  </div>
+                  {videoPreview && (
+                    <div style={{ marginTop: '8px', position: 'relative', display: 'inline-block' }}>
+                      <video src={videoPreview} controls style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }} />
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px', lineHeight: '20px', textAlign: 'center', padding: 0 }}
+                      >×</button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="field">
                   <label>Priority</label>
                   <select value={priority} onChange={(e) => setPriority(e.target.value)}>
@@ -443,54 +570,128 @@ function TenantDashboard({ onLogout }) {
           )}
 
           {activeTab === 'view' && (
-            <div className="card card-requests">
-              <div className="card-header-row">
+            <div className="card">
+              <style>{`
+                .requests-grid {
+                  display: grid;
+                  gap: 16px;
+                  grid-template-columns: 1fr;
+                }
+                @media (min-width: 600px) {
+                  .requests-grid { grid-template-columns: repeat(2, 1fr); }
+                }
+                @media (min-width: 960px) {
+                  .requests-grid { grid-template-columns: repeat(3, 1fr); }
+                }
+                @media (min-width: 1400px) {
+                  .requests-grid { grid-template-columns: repeat(4, 1fr); }
+                }
+                .request-card {
+                  background: var(--bg-surface, #fff);
+                  border: 1px solid var(--border-subtle, #e5e7eb);
+                  border-radius: 12px;
+                  padding: 16px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 6px;
+                }
+              `}</style>
+              <div className="card-header-row" style={{ marginBottom: '16px' }}>
                 <div className="card-title">My requests</div>
                 <span className="chip">{requests.length} requests</span>
               </div>
-              <ul className="list-scroll">
+              <div className="requests-grid">
                 {requests.map((r) => (
-                  <li key={r._id}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <div>
-                        <strong>{r.title}</strong> · {r.priority}
-                      </div>
+                  <div key={r._id} className="request-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.95rem', flex: 1 }}>{r.title}</strong>
                       <span
                         className={
                           'status-pill ' +
-                          `status-${(r.status || '')
-                            .toLowerCase()
-                            .replace(/\s+/g, '-')}`
+                          `status-${(r.status || '').toLowerCase().replace(/\s+/g, '-')}`
                         }
+                        style={{ flexShrink: 0 }}
                       >
                         {r.status}
                       </span>
                     </div>
+                    <div className="app-subtitle" style={{ fontSize: '0.82rem' }}>Priority: {r.priority}</div>
                     {r.createdAt && (
-                      <div className="app-subtitle">
-                        Raised on:{' '}
-                        {new Date(r.createdAt).toLocaleString()}
+                      <div className="app-subtitle" style={{ fontSize: '0.82rem' }}>
+                        Raised: {new Date(r.createdAt).toLocaleString()}
                       </div>
                     )}
                     {r.notes && (
-                      <div className="app-subtitle">
-                        Technician comments: {r.notes}
+                      <div className="app-subtitle" style={{ fontSize: '0.82rem' }}>
+                        Comments: {r.notes}
                       </div>
                     )}
-                  </li>
+                    {r.status === 'Completed' && (
+                      <a
+                        href={RATING_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ marginTop: '6px', display: 'inline-block', fontSize: '0.82rem', color: '#4285F4', textDecoration: 'none', fontWeight: 600 }}
+                      >
+                        ⭐ Rate us on Google
+                      </a>
+                    )}
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {showRatingModal && (
+        <div
+          onClick={() => setShowRatingModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 500,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: '16px',
+              padding: '32px 28px', maxWidth: '360px', width: '100%',
+              textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+            }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⭐</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '8px', color: '#111' }}>
+              Your request is complete!
+            </div>
+            <div style={{ color: '#666', marginBottom: '24px', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              We hope everything was resolved to your satisfaction. Would you like to rate us on Google?
+            </div>
+            <a
+              href={RATING_URL}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setShowRatingModal(false)}
+              style={{
+                display: 'block', background: '#4285F4', color: '#fff',
+                padding: '12px 20px', borderRadius: '8px', fontWeight: 600,
+                textDecoration: 'none', marginBottom: '12px'
+              }}
+            >
+              Rate us on Google ⭐
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowRatingModal(false)}
+              style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.9rem' }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
