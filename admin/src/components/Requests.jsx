@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Row, Col } from 'antd';
 import API_BASE from '../api';
 import '../styles/requests.scss';
 
@@ -44,42 +45,46 @@ export default function Requests({ token }) {
         <span className="chip">{requests.length} items</span>
       </div>
       {error && <p className="text-danger">{error}</p>}
-      <div className="filters-row">
-        <div className="field">
-          <label>Status</label>
-          <select
-            value={requestStatusFilter}
-            onChange={(e) => setRequestStatusFilter(e.target.value)}
-          >
-            <option value="all">All statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="In progress">In progress</option>
-            <option value="Waiting for parts">Waiting for parts</option>
-            <option value="Rejected">Rejected</option>
-            <option value="Completed">Completed</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>Priority</label>
-          <select
-            value={requestPriorityFilter}
-            onChange={(e) => setRequestPriorityFilter(e.target.value)}
-          >
-            <option value="all">All priorities</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Emergency">Emergency</option>
-          </select>
-        </div>
-      </div>
-      <div className="requests-grid">
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={12}>
+          <div className="field">
+            <label>Status</label>
+            <select
+              value={requestStatusFilter}
+              onChange={(e) => setRequestStatusFilter(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In progress">In progress</option>
+              <option value="Waiting for parts">Waiting for parts</option>
+              <option value="Rejected">Rejected</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="field">
+            <label>Priority</label>
+            <select
+              value={requestPriorityFilter}
+              onChange={(e) => setRequestPriorityFilter(e.target.value)}
+            >
+              <option value="all">All priorities</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Emergency">Emergency</option>
+            </select>
+          </div>
+        </Col>
+      </Row>
+      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
         {filteredRequests.map((r) => {
           const isOverdueUnassigned =
             !r.technician && Date.now() - new Date(r.createdAt) > 1 * 60 * 1000;
           return (
+            <Col key={r._id} xs={24} sm={12} lg={8} xl={6}>
             <div
-              key={r._id}
               className={`metric-card${isOverdueUnassigned ? ' metric-card--overdue' : ''}`}
             >
               <div className="request-row-header">
@@ -131,9 +136,10 @@ export default function Requests({ token }) {
                 </div>
               )}
             </div>
+            </Col>
           );
         })}
-      </div>
+      </Row>
     </div>
   );
 }

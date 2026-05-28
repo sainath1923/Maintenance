@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { notification } from 'antd';
+import { notification, Row, Col } from 'antd';
 import API_BASE from '../api';
 
 export default function AddAccess({ token }) {
@@ -51,56 +51,72 @@ export default function AddAccess({ token }) {
   return (
     <div className="card">
       {error && <p className="text-danger">{error}</p>}
-      <form onSubmit={createUser} className="two-column-form">
-        <div className="field">
-          <label>Role</label>
-          <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
-            <option value="tenant">Tenant</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="technician">Technician</option>
-            <option value="delivery">Delivery</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        {newUserRole === 'technician' && (
-          <div className="field">
-            <label>Technician type</label>
-            <select
-              value={newUserTechnicianType}
-              onChange={(e) => setNewUserTechnicianType(e.target.value)}
-            >
-              <option value="Plumber">Plumber</option>
-              <option value="Electrician">Electrician</option>
-              <option value="Carpenter">Carpenter</option>
-              <option value="Painter">Painter</option>
-              <option value="Cleaner">Cleaner</option>
-              <option value="AC Technician">AC Technician</option>
-            </select>
-          </div>
-        )}
-        <div className="field">
-          <label>Name</label>
-          <input value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
-        </div>
-        <div className="field">
-          <label>Email</label>
-          <input value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
-        </div>
-        <div className="field">
-          <label>Password</label>
-          <input
-            type="password"
-            value={newUserPassword}
-            onChange={(e) => setNewUserPassword(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label>Phone</label>
-          <input value={newUserPhone} onChange={(e) => setNewUserPhone(e.target.value)} />
-        </div>
-        <button className="btn-primary" type="submit">
-          Create user
-        </button>
+      <form onSubmit={createUser}>
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Role</label>
+              <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)}>
+                <option value="tenant">Tenant</option>
+                <option value="supervisor">Supervisor</option>
+                <option value="technician">Technician</option>
+                <option value="delivery">Delivery</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </Col>
+          {newUserRole === 'technician' && (
+            <Col xs={24} sm={12}>
+              <div className="field">
+                <label>Technician type</label>
+                <select
+                  value={newUserTechnicianType}
+                  onChange={(e) => setNewUserTechnicianType(e.target.value)}
+                >
+                  <option value="Plumber">Plumber</option>
+                  <option value="Electrician">Electrician</option>
+                  <option value="Carpenter">Carpenter</option>
+                  <option value="Painter">Painter</option>
+                  <option value="Cleaner">Cleaner</option>
+                  <option value="AC Technician">AC Technician</option>
+                </select>
+              </div>
+            </Col>
+          )}
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Name</label>
+              <input value={newUserName} onChange={(e) => setNewUserName(e.target.value)} />
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Email</label>
+              <input value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} />
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Password</label>
+              <input
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Phone</label>
+              <input value={newUserPhone} onChange={(e) => setNewUserPhone(e.target.value)} />
+            </div>
+          </Col>
+          <Col xs={24} style={{ textAlign: 'center', marginTop: 8 }}>
+            <button className="btn-primary" type="submit">
+              Create user
+            </button>
+          </Col>
+        </Row>
       </form>
     </div>
   );

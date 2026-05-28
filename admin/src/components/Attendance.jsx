@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Row, Col } from 'antd';
 import API_BASE from '../api';
 import '../styles/attendance.scss';
 
@@ -151,14 +152,12 @@ export default function Attendance({ token }) {
         Set the allowed punch-in/out location for each role. Staff must be within the specified
         radius to record attendance.
       </p>
-      <div className="attendance-roles">
+      <Row gutter={[12, 12]}>
         {ATTENDANCE_ROLES.map((role) => {
           const loc = attendanceLocations[role];
           return (
-            <div
-              key={role}
-            className="attendance-role-card"
-            >
+            <Col key={role} xs={24} sm={12} lg={8}>
+              <div className="attendance-role-card">
               <div className="attendance-role-title">
                 {role}
               </div>
@@ -225,10 +224,11 @@ export default function Attendance({ token }) {
               {attendanceError[role] && (
                 <p className="attendance-error-msg">{attendanceError[role]}</p>
               )}
-            </div>
+              </div>
+            </Col>
           );
         })}
-      </div>
+      </Row>
 
       <div className="attendance-records">
         <div className="card-header-row records-header-row">
@@ -252,30 +252,34 @@ export default function Attendance({ token }) {
             </button>
           </div>
         </div>
-        <div className="filters-row filters-row--mb">
-          <div className="field">
-            <label>Role</label>
-            <select
-              value={attendanceRoleFilter}
-              onChange={(e) => setAttendanceRoleFilter(e.target.value)}
-            >
-              <option value="all">All roles</option>
-              {ATTENDANCE_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Date</label>
-            <input
-              type="date"
-              value={attendanceDateFilter}
-              onChange={(e) => setAttendanceDateFilter(e.target.value)}
-            />
-          </div>
-        </div>
+        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Role</label>
+              <select
+                value={attendanceRoleFilter}
+                onChange={(e) => setAttendanceRoleFilter(e.target.value)}
+              >
+                <option value="all">All roles</option>
+                {ATTENDANCE_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Col>
+          <Col xs={24} sm={12}>
+            <div className="field">
+              <label>Date</label>
+              <input
+                type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              />
+            </div>
+          </Col>
+        </Row>
         <div className="table-scroll">
           <table className="attendance-table">
             <thead>

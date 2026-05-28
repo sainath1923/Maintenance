@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Row, Col } from 'antd';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  AreaChart, Area,
+} from 'recharts';
 import API_BASE from '../api';
 import '../styles/dashboard.scss';
 
@@ -170,203 +175,214 @@ export default function Dashboard({ token }) {
         <span className="chip">Live view</span>
       </div>
       {error && <p className="text-danger">{error}</p>}
-      <div className="dashboard-grid">
-        <div className="dashboard-metrics">
+      <Row gutter={[12, 12]}>
+        <Col xs={12} lg={6}>
           <div className="metric-card">
             <div className="metric-label">Total requests</div>
             <div className="metric-value">{totalTasks}</div>
           </div>
+        </Col>
+        <Col xs={12} lg={6}>
           <div className="metric-card">
             <div className="metric-label">Pending</div>
             <div className="metric-value">{pendingCount}</div>
           </div>
+        </Col>
+        <Col xs={12} lg={6}>
           <div className="metric-card">
             <div className="metric-label">In progress</div>
             <div className="metric-value">{inProgressCount}</div>
           </div>
+        </Col>
+        <Col xs={12} lg={6}>
           <div className="metric-card">
             <div className="metric-label">Completed</div>
             <div className="metric-value">{completedCount}</div>
           </div>
-        </div>
-        <div className="dashboard-chart">
-          <div className="section-title">By priority</div>
-          <div className="bar-section">
-            {['High', 'Medium', 'Low'].map((p) => {
-              const value = priorityCounts[p] || 0;
-              const width = (value / maxPriorityValue) * 100;
-              return (
-                <div className="bar-row" key={p}>
-                  <span className="bar-label">{p}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${width}%` }} />
-                  </div>
-                  <span className="bar-count">{value}</span>
-                </div>
-              );
-            })}
+        </Col>
+      </Row>
+      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+        <Col xs={24} md={8}>
+          <div className="dashboard-chart">
+            <div className="section-title">By priority</div>
+            <ResponsiveContainer width="100%" height={130}>
+              <BarChart
+                data={['High', 'Medium', 'Low'].map((p) => ({ name: p, value: priorityCounts[p] || 0 }))}
+                layout="vertical"
+                margin={{ top: 4, right: 20, left: 0, bottom: 4 }}
+              >
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" width={52} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => [v, 'Requests']} />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                  {['High', 'Medium', 'Low'].map((p) => (
+                    <Cell key={p} fill={p === 'High' ? '#ef4444' : p === 'Medium' ? '#f59e0b' : '#22c55e'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-        <div className="dashboard-chart">
-          <div className="section-title">By status</div>
-          <div className="bar-section">
-            {Object.entries(statusCounts).map(([status, value]) => {
-              const width = (value / maxStatusValue) * 100;
-              return (
-                <div className="bar-row" key={status}>
-                  <span className="bar-label">{status}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill bar-fill-secondary" style={{ width: `${width}%` }} />
-                  </div>
-                  <span className="bar-count">{value}</span>
-                </div>
-              );
-            })}
+        </Col>
+        <Col xs={24} md={8}>
+          <div className="dashboard-chart">
+            <div className="section-title">By status</div>
+            <ResponsiveContainer width="100%" height={130}>
+              <BarChart
+                data={Object.entries(statusCounts).map(([name, value]) => ({ name, value }))}
+                layout="vertical"
+                margin={{ top: 4, right: 20, left: 0, bottom: 4 }}
+              >
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" width={104} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip formatter={(v) => [v, 'Requests']} />
+                <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-        </div>
-        <div className="dashboard-chart">
-          <div className="section-title">Top technicians</div>
-          {topTechnicians.length === 0 && (
-            <div className="text-muted text-sm">No assignments yet.</div>
-          )}
-          {topTechnicians.map(({ tech, count }) => (
-            <div className="bar-row" key={tech._id}>
-              <span className="bar-label">
-                {tech.name}
-                {tech.technicianType ? ` (${tech.technicianType})` : ''}
-              </span>
-              <div className="bar-track">
-                <div
-                  className="bar-fill bar-fill-accent"
-                  style={{ width: `${(count / (topTechnicians[0]?.count || 1)) * 100}%` }}
+        </Col>
+        <Col xs={24} md={8}>
+          <div className="dashboard-chart">
+            <div className="section-title">Top technicians</div>
+            {topTechnicians.length === 0 ? (
+              <div className="text-muted text-sm">No assignments yet.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(80, topTechnicians.length * 38)}>
+                <BarChart
+                  data={topTechnicians.map(({ tech, count }) => ({
+                    name: tech.name,
+                    type: tech.technicianType || '',
+                    value: count,
+                  }))}
+                  layout="vertical"
+                  margin={{ top: 4, right: 20, left: 0, bottom: 4 }}
+                >
+                  <XAxis type="number" hide allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v) => [v, 'Assignments']} />
+                  <Bar dataKey="value" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Col>
+      </Row>
+      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+        <Col xs={24} md={12}>
+          <div className="dashboard-chart">
+            <div className="section-title">Live trend (6 months)</div>
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart
+                data={monthlyTrend.map((m) => ({ name: m.label, count: m.count }))}
+                margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(v) => [v, 'Requests']} />
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  fill="url(#trendFill)"
+                  dot={{ r: 3, fill: '#2563eb', strokeWidth: 0 }}
                 />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Col>
+        <Col xs={24} md={12}>
+          <div className="dashboard-chart">
+            <div className="section-title">By category (overall)</div>
+            {Object.keys(categoryCounts).length === 0 ? (
+              <div className="text-muted text-sm">No request data yet.</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart
+                  data={Object.entries(categoryCounts).map(([name, value]) => ({ name, value }))}
+                  margin={{ top: 8, right: 8, left: -20, bottom: 40 }}
+                >
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-25} textAnchor="end" interval={0} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v) => [v, 'Requests']} />
+                  <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </Col>
+      </Row>
+      <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+        <Col xs={24} md={12}>
+          <div className="dashboard-chart">
+            <div className="section-title">Top apartments by requests</div>
+            {topApartments.length === 0 ? (
+              <div className="text-muted text-sm">No request data yet.</div>
+            ) : (
+              <div className="stocks-table-wrap stocks-table-wrap--mt">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Apartment</th>
+                      <th>Requests</th>
+                      <th>Top Category</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topApartments.map((apt) => (
+                      <tr key={apt.label}>
+                        <td>{apt.label}</td>
+                        <td>{apt.count}</td>
+                        <td>{apt.topCategory}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <span className="bar-count">{count}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="dashboard-row-50">
-        <div className="dashboard-chart dashboard-half">
-          <div className="section-title">Live trend (6 months)</div>
-          <div className="line-chart">
-            <svg viewBox="0 0 100 40" preserveAspectRatio="none">
-              <polyline
-                fill="none"
-                stroke="url(#adminLineGradient)"
-                strokeWidth="1.8"
-                points={monthlyTrend
-                  .map((m, idx) => {
-                    const x =
-                      monthlyTrend.length === 1 ? 50 : (idx / (monthlyTrend.length - 1)) * 100;
-                    const y = 35 - (m.count / maxMonthlyValue) * 28;
-                    return `${x},${y}`;
-                  })
-                  .join(' ')}
-              />
-              {monthlyTrend.map((m, idx) => {
-                const x =
-                  monthlyTrend.length === 1 ? 50 : (idx / (monthlyTrend.length - 1)) * 100;
-                const y = 35 - (m.count / maxMonthlyValue) * 28;
-                return <circle key={m.key} cx={x} cy={y} r={1.7} className="line-point" />;
-              })}
-              <defs>
-                <linearGradient id="adminLineGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#93c5fd" />
-                  <stop offset="100%" stopColor="#2563eb" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="line-chart-labels">
-              {monthlyTrend.map((m) => (
-                <span key={m.key}>{m.label}</span>
-              ))}
-            </div>
+            )}
           </div>
-        </div>
-        <div className="dashboard-chart dashboard-half">
-          <div className="section-title">By category (overall)</div>
-          <div className="bar-section">
-            {Object.entries(categoryCounts).map(([category, value]) => {
-              const width = (value / maxCategoryValue) * 100;
-              return (
-                <div className="bar-row" key={category}>
-                  <span className="bar-label">{category}</span>
-                  <div className="bar-track">
-                    <div
-                      className="bar-fill bar-fill-secondary"
-                      style={{ width: `${width}%` }}
-                    />
-                  </div>
-                  <span className="bar-count">{value}</span>
-                </div>
-              );
-            })}
+        </Col>
+        <Col xs={24} md={12}>
+          <div className="dashboard-chart">
+            <div className="section-title">Technician resolution times</div>
+            {techResolutionRows.length === 0 ? (
+              <div className="text-muted text-sm">
+                No completed requests with resolution data yet.
+              </div>
+            ) : (
+              <div className="stocks-table-wrap stocks-table-wrap--mt">
+                <table className="stocks-table">
+                  <thead>
+                    <tr>
+                      <th>Technician</th>
+                      <th>Completed</th>
+                      <th>Avg Time</th>
+                      <th>Fastest</th>
+                      <th>Slowest</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {techResolutionRows.map((row) => (
+                      <tr key={row.techId}>
+                        <td>{row.name}</td>
+                        <td>{row.count}</td>
+                        <td><strong>{row.avg}</strong></td>
+                        <td className="td-time-fastest">{row.min}</td>
+                        <td className="td-time-slowest">{row.max}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-      <div className="dashboard-row-50 dashboard-row-50--mt">
-        <div className="dashboard-chart dashboard-half">
-          <div className="section-title">Top apartments by requests</div>
-          {topApartments.length === 0 ? (
-            <div className="text-muted text-sm">No request data yet.</div>
-          ) : (
-            <div className="stocks-table-wrap stocks-table-wrap--mt">
-              <table className="stocks-table">
-                <thead>
-                  <tr>
-                    <th>Apartment</th>
-                    <th>Requests</th>
-                    <th>Top Category</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topApartments.map((apt) => (
-                    <tr key={apt.label}>
-                      <td>{apt.label}</td>
-                      <td>{apt.count}</td>
-                      <td>{apt.topCategory}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-        <div className="dashboard-chart dashboard-half">
-          <div className="section-title">Technician resolution times</div>
-          {techResolutionRows.length === 0 ? (
-            <div className="text-muted text-sm">
-              No completed requests with resolution data yet.
-            </div>
-          ) : (
-            <div className="stocks-table-wrap stocks-table-wrap--mt">
-              <table className="stocks-table">
-                <thead>
-                  <tr>
-                    <th>Technician</th>
-                    <th>Completed</th>
-                    <th>Avg Time</th>
-                    <th>Fastest</th>
-                    <th>Slowest</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {techResolutionRows.map((row) => (
-                    <tr key={row.techId}>
-                      <td>{row.name}</td>
-                      <td>{row.count}</td>
-                      <td><strong>{row.avg}</strong></td>
-                      <td className="td-time-fastest">{row.min}</td>
-                      <td className="td-time-slowest">{row.max}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+        </Col>
+      </Row>
     </div>
   );
 }

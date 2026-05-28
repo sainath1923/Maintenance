@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Row, Col } from 'antd';
 import API_BASE from '../api';
 import '../styles/team.scss';
 
@@ -59,53 +60,59 @@ export default function Team({ token }) {
         <span className="chip">{users.length} users</span>
       </div>
       {error && <p className="text-danger">{error}</p>}
-      <div className="filters-row">
-        <div className="field">
-          <label>Role</label>
-          <select value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value)}>
-            <option value="all">All roles</option>
-            <option value="tenant">Tenant</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="technician">Technician</option>
-            <option value="delivery">Delivery</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>Search</label>
-          <input
-            value={userSearch}
-            onChange={(e) => setUserSearch(e.target.value)}
-            placeholder="Name or email"
-          />
-        </div>
-      </div>
-      <div className="dashboard-grid team-grid">
-        {filteredUsers.map((u) => (
-          <div key={u._id} className="metric-card team-card">
-            <div className="user-card-header">
-              <div>
-                <strong>{u.name}</strong>{' '}
-                <span className="user-email">({u.email})</span>
-              </div>
-              <button
-                className={
-                  'btn-small status-toggle-button ' + (u.isActive ? 'deactivate' : 'activate')
-                }
-                onClick={() => toggleActive(u)}
-              >
-                {u.isActive ? 'Deactivate' : 'Activate'}
-              </button>
-            </div>
-            <div className="text-muted role-label">
-              Role: {u.role}
-              {u.role === 'technician' && u.technicianType ? ` (${u.technicianType})` : ''}
-            </div>
-            <div className="text-muted">Mobile: {u.phone || '-'}</div>
-            <div className="text-muted">Status: {u.isActive ? 'Active' : 'Inactive'}</div>
+      <Row gutter={[12, 12]}>
+        <Col xs={24} sm={12}>
+          <div className="field">
+            <label>Role</label>
+            <select value={userRoleFilter} onChange={(e) => setUserRoleFilter(e.target.value)}>
+              <option value="all">All roles</option>
+              <option value="tenant">Tenant</option>
+              <option value="supervisor">Supervisor</option>
+              <option value="technician">Technician</option>
+              <option value="delivery">Delivery</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
+        </Col>
+        <Col xs={24} sm={12}>
+          <div className="field">
+            <label>Search</label>
+            <input
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              placeholder="Name or email"
+            />
+          </div>
+        </Col>
+      </Row>
+      <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
+        {filteredUsers.map((u) => (
+          <Col key={u._id} xs={24} sm={12} lg={8} xl={6}>
+            <div className="metric-card team-card">
+              <div className="user-card-header">
+                <div>
+                  <strong>{u.name}</strong>{' '}
+                  <span className="user-email">({u.email})</span>
+                </div>
+                <button
+                  className={
+                    'btn-small status-toggle-button ' + (u.isActive ? 'deactivate' : 'activate')
+                  }
+                  onClick={() => toggleActive(u)}
+                >
+                  {u.isActive ? 'Deactivate' : 'Activate'}
+                </button>
+              </div>
+              <div className="text-muted role-label">
+                Role: {u.role}
+                {u.role === 'technician' && u.technicianType ? ` (${u.technicianType})` : ''}
+              </div>
+              <div className="text-muted">Mobile: {u.phone || '-'}</div>
+              <div className="text-muted">Status: {u.isActive ? 'Active' : 'Inactive'}</div>
+            </div>
+          </Col>
         ))}
-      </div>
+      </Row>
     </div>
   );
 }
