@@ -1,0 +1,18 @@
+/* ── Second dashboard-row-50 margin override ─────────── */
+.dashboard-row-50--mt {
+  margin-top: 16px;
+}
+
+/* ── Stocks table margin override ────────────────────── */
+.stocks-table-wrap--mt {
+  margin-top: 8px;
+}
+
+/* ── Resolution time colours ─────────────────────────── */
+.td-time-fastest {
+  color: #16a34a;
+}
+
+.td-time-slowest {
+  color: #dc2626;
+}

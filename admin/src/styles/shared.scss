@@ -1,0 +1,32 @@
+/* ── Header logo ─────────────────────────────────────── */
+.header-logo-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo-img {
+  height: 75px;
+  object-fit: contain;
+}
+
+/* ── Utility ─────────────────────────────────────────── */
+.text-sm {
+  font-size: 12px;
+}
+
+.text-success {
+  color: #16a34a;
+}
+
+.text-danger-val {
+  color: #dc2626;
+}
+
+.text-placeholder {
+  color: #9ca3af;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}

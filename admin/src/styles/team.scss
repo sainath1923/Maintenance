@@ -1,0 +1,28 @@
+/* ── Team grid override ───────────────────────────────── */
+.team-grid {
+  margin-top: 0;
+}
+
+/* ── Individual user card ────────────────────────────── */
+.team-card {
+  min-width: 220px;
+  margin-bottom: 8px;
+}
+
+/* ── User card header row ────────────────────────────── */
+.user-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ── User email label ────────────────────────────────── */
+.user-email {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* ── Role label spacing ──────────────────────────────── */
+.role-label {
+  margin-top: 4px;
+}

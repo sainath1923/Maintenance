@@ -1,0 +1,57 @@
+/* ── Company profile subtitle ─────────────────────────── */
+.company-profile-subtitle {
+  margin-bottom: 8px;
+}
+
+/* ── Profile form action row ─────────────────────────── */
+.profile-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ── QR toggle buttons ───────────────────────────────── */
+.qr-btn-right {
+  margin-left: 8px;
+}
+
+/* ── Logo preview ────────────────────────────────────── */
+.logo-preview-wrap {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    height: 75px;
+    object-fit: contain;
+  }
+}
+
+/* ── QR code section ─────────────────────────────────── */
+.qr-section {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+}
+
+.qr-block {
+  text-align: center;
+}
+
+.qr-canvas-wrap {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.qr-download-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
