@@ -1,0 +1,86 @@
+.request-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 500px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.request-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  padding: 14px;
+  font-size: 13px;
+  background: #fff;
+  gap: 10px;
+
+  &.overdue {
+    background: #fee2e2;
+    border-color: rgba(248, 113, 113, 0.5);
+  }
+}
+
+.request-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.ticket-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.ticket-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ticket-subline {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.ticket-label {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.status-edit-row {
+  margin-top: 8px;
+}
+
+.status-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}

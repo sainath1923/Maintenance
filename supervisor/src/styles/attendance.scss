@@ -1,0 +1,56 @@
+.attendance-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.attendance-title {
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.attendance-date {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.attendance-times {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.attendance-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.attendance-time-label {
+  width: 90px;
+  color: #374151;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.attendance-time-value {
+  font-size: 14px;
+
+  &.present {
+    color: #16a34a;
+    font-weight: 600;
+  }
+
+  &.absent {
+    color: #9ca3af;
+  }
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
