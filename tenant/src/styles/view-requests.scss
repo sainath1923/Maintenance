@@ -1,0 +1,41 @@
+.card-header-row {
+  margin-bottom: 16px;
+}
+
+.request-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+}
+
+.request-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  strong {
+    font-size: 0.95rem;
+    flex: 1;
+  }
+}
+
+.request-card-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.rating-link {
+  margin-top: 6px;
+  display: inline-block;
+  font-size: 0.82rem;
+  color: #4285f4;
+  text-decoration: none;
+  font-weight: 600;
+}
