@@ -6,6 +6,7 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import ItemRequests from './components/ItemRequests';
 import AttendanceModal from './components/AttendanceModal';
+import NotificationsBell from './components/NotificationsBell';
 
 function ProcurementDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,7 +30,8 @@ function ProcurementDashboard({ onLogout }) {
             </div>
           </Col>
           <Col>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="header-actions">
+              <NotificationsBell token={token} />
               <button className="btn-outline btn-small" onClick={() => setShowAttendance(true)}>
                 Attendance
               </button>
