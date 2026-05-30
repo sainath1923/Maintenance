@@ -1,0 +1,20 @@
+/* ── Header logo ─────────────────────────────────────── */
+.header-logo-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-logo-img {
+  height: 75px;
+  object-fit: contain;
+}
+
+/* ── Utility ─────────────────────────────────────────── */
+.text-sm {
+  font-size: 12px;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}

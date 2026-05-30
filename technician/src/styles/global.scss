@@ -1,0 +1,297 @@
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --accent: #22c55e;
+  --bg: #f3f4f6;
+  --border-subtle: rgba(148, 163, 184, 0.4);
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --danger: #b91c1c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top left, #e0f2fe 0, #eff6ff 40%, #ffffff 100%);
+  color: var(--text-main);
+}
+
+/* ── App shell ─────────────────────────────────────────── */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 24px;
+}
+
+.app-card {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px 28px 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 55%), #ffffff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+
+  @media (max-width: 900px) {
+    padding: 20px;
+  }
+}
+
+.app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.app-title {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--primary-dark);
+}
+
+.app-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.app-badge {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  color: var(--text-muted);
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Card ──────────────────────────────────────────────── */
+.card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #ffffff;
+  padding: 16px 18px;
+}
+
+.dashboard-card {
+  background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.07), transparent 55%), #ffffff;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eff6ff;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #1d4ed8;
+}
+
+/* ── Form elements ────────────────────────────────────── */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+input,
+textarea,
+select {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: #ffffff;
+  color: var(--text-main);
+  padding: 8px 10px;
+  font-size: 14px;
+
+  &:focus {
+    outline: 1px solid rgba(37, 99, 235, 0.8);
+    border-color: rgba(37, 99, 235, 0.8);
+  }
+}
+
+/* ── Buttons ──────────────────────────────────────────── */
+button {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ── Text utilities ───────────────────────────────────── */
+.text-danger {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.text-muted {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.text-success {
+  color: #16a34a;
+}
+
+.text-danger-val {
+  color: #dc2626;
+}
+
+.text-placeholder {
+  color: #9ca3af;
+}
+
+/* ── Stocks table ─────────────────────────────────────── */
+.stocks-table-wrap {
+  margin-top: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.stocks-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  th {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+}
+
+.stocks-empty-row {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Status pills ─────────────────────────────────────── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-pending {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.status-in-progress {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-waiting-for-parts {
+  background: #faf5ff;
+  color: #6b21a8;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* ── Metric card ──────────────────────────────────────── */
+.metric-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+}
+
+/* ── Header actions group ─────────────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

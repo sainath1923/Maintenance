@@ -1,0 +1,31 @@
+.attendance-date {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+}
+
+.attendance-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
