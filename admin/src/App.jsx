@@ -9,6 +9,7 @@ import Team from './components/Team';
 import Dashboard from './components/Dashboard';
 import Requests from './components/Requests';
 import Attendance from './components/Attendance';
+import Notifications from './components/Notifications';
 
 function AdminDashboard({ onLogout }) {
   const [activeTab, setActiveTab] = useState('company');
@@ -58,6 +59,7 @@ function AdminDashboard({ onLogout }) {
               { key: 'team', label: 'Team', children: <Team token={token} /> },
               { key: 'requests', label: 'Requests', children: <Requests token={token} /> },
               { key: 'attendance', label: 'Attendance', children: <Attendance token={token} /> },
+              { key: 'notifications', label: 'Notifications', children: <Notifications token={token} /> },
             ]}
           />
         </div>
