@@ -1,0 +1,36 @@
+/* ── Attendance modal ─────────────────────────────────── */
+.attendance-date {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-bottom: 12px;
+}
+
+.attendance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.attendance-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.attendance-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}

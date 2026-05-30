@@ -1,0 +1,51 @@
+/* ── Requests table ──────────────────────────────────── */
+.table-wrap {
+  margin-top: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  th {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+}
+
+.muted-cell {
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Assign delivery modal ────────────────────────────── */
+.assign-delivery-modal {
+  margin-bottom: 12px;
+}
+
+.assign-delivery-panel {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  background: #fefce8;
+}
+
+.assign-delivery-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #854d0e;
+  margin-bottom: 10px;
+}

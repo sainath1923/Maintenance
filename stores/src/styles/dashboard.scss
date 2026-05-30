@@ -1,0 +1,155 @@
+/* ── Dashboard layout ─────────────────────────────────── */
+.dashboard-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-filter-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dashboard-year-filter {
+  min-width: 180px;
+}
+
+/* ── Summary cards ────────────────────────────────────── */
+.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 14px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.summary-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-value {
+  margin-top: 6px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Chart grid ───────────────────────────────────────── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── SVG charts ───────────────────────────────────────── */
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-axis-label {
+  fill: #475569;
+  font-size: 10px;
+}
+
+.chart-point-label {
+  fill: #9a3412;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.chart-axis-line {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+}
+
+.chart-line-path {
+  fill: none;
+  stroke: #f97316;
+  stroke-width: 3;
+}
+
+.chart-line-point {
+  fill: #ea580c;
+}
+
+/* ── Doughnut chart ───────────────────────────────────── */
+.donut-chart-wrap {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(180px, 1fr);
+  gap: 14px;
+  align-items: center;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.donut-svg {
+  margin: 0 auto;
+}
+
+.chart-donut-center-label {
+  fill: #64748b;
+  font-size: 11px;
+}
+
+.chart-donut-center-value {
+  fill: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ── Chart legend ─────────────────────────────────────── */
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-legend-item {
+  display: grid;
+  grid-template-columns: 10px minmax(100px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.chart-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.chart-legend-label {
+  font-size: 12px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend-value {
+  font-size: 12px;
+  color: #9a3412;
+  font-weight: 600;
+}
+
+/* ── Empty chart ──────────────────────────────────────── */
+.chart-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 10px 0;
+}
