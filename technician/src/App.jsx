@@ -7,6 +7,7 @@ import Tickets from './components/Tickets';
 import Stocks from './components/Stocks';
 import RaisedRequests from './components/RaisedRequests';
 import AttendanceModal from './components/AttendanceModal';
+import NotificationsBell from './components/NotificationsBell';
 
 function TechnicianDashboard({ onLogout }) {
   const [showAttendance, setShowAttendance] = useState(false);
@@ -34,6 +35,7 @@ function TechnicianDashboard({ onLogout }) {
               {currentUser?.name && (
                 <span className="app-badge">{currentUser.name}</span>
               )}
+              <NotificationsBell token={token} />
               <button
                 className="btn-outline btn-small"
                 onClick={() => setShowAttendance(true)}
