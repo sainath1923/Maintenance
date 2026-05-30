@@ -5,6 +5,7 @@ import { useCompanyLogo } from './hooks';
 import API_BASE from './api';
 import Login from './components/Login';
 import AttendanceModal from './components/AttendanceModal';
+import NotificationsBell from './components/NotificationsBell';
 import Dashboard from './components/Dashboard';
 import StockItems from './components/StockItems';
 import ItemRequests from './components/ItemRequests';
@@ -108,6 +109,7 @@ function StoresDashboard({ onLogout }) {
           </Col>
           <Col>
             <div className="header-actions">
+              <NotificationsBell token={token} />
               <button className="btn-outline btn-small" onClick={() => setShowAttendance(true)}>
                 Attendance
               </button>
