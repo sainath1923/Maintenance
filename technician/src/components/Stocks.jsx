@@ -81,27 +81,25 @@ export default function Stocks({ token }) {
           <thead>
             <tr>
               <th>Item name</th>
-              <th>Brand</th>
               <th>Category</th>
-              <th>Available</th>
-              <th>Unit</th>
+              <th>Available qty</th>
+              <th>Price</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {stocksLoading && (
-              <tr><td colSpan={6} className="stocks-empty-row">Loading…</td></tr>
+              <tr><td colSpan={5} className="stocks-empty-row">Loading…</td></tr>
             )}
             {!stocksLoading && stockEntries.length === 0 && (
-              <tr><td colSpan={6} className="stocks-empty-row">No stock entries found.</td></tr>
+              <tr><td colSpan={5} className="stocks-empty-row">No stock entries found.</td></tr>
             )}
             {stockEntries.map((entry) => (
               <tr key={entry._id}>
-                <td>{entry.itemName}</td>
-                <td>{entry.brand || '-'}</td>
+                <td>{entry.item}</td>
                 <td>{entry.category || '-'}</td>
-                <td>{entry.totalQuantity}</td>
-                <td>{entry.unit || '-'}</td>
+                <td>{entry.quantity ?? 0}</td>
+                <td>{entry.price ? `AED ${entry.price}` : '-'}</td>
                 <td>
                   <button className="btn-primary btn-small" onClick={() => openModal(entry)}>
                     Request
@@ -116,7 +114,7 @@ export default function Stocks({ token }) {
       <Modal
         open={modalOpen}
         onCancel={closeModal}
-        title={`Request: ${selectedEntry?.itemName || ''}`}
+        title={`Request: ${selectedEntry?.item || ''}`}
         onOk={submitStockRequest}
         okText="Submit request"
         confirmLoading={submitting}
