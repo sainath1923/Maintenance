@@ -1,0 +1,184 @@
+/* ── Card ────────────────────────────────────────────── */
+.card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #ffffff;
+  padding: 16px 18px;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+/* ── Chip ────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eff6ff;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #1d4ed8;
+}
+
+/* ── Form fields ─────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+input,
+select,
+textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: #fff;
+  color: var(--text-main);
+  padding: 8px 10px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+button {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #fff;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* ── Text utilities ──────────────────────────────────── */
+.text-danger {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.text-success {
+  color: #16a34a;
+}
+
+.text-success-msg {
+  color: #15803d;
+  font-size: 13px;
+}
+
+.text-danger-val {
+  color: #dc2626;
+}
+
+.text-placeholder {
+  color: #9ca3af;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* ── Table ───────────────────────────────────────────── */
+.table-wrap {
+  margin-top: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.data-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  }
+
+  th {
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  td:last-child {
+    white-space: nowrap;
+  }
+}
+
+.muted-cell {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px !important;
+}
+
+/* ── Status pills ────────────────────────────────────── */
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+
+  &.status-new {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+
+  &.status-pending {
+    background: #fff7ed;
+    color: #9a3412;
+  }
+
+  &.status-approved {
+    background: #dcfce7;
+    color: #166534;
+  }
+}

@@ -1,0 +1,28 @@
+/* ── Attendance modal content ────────────────────────── */
+.attendance-date {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.attendance-label {
+  width: 90px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.attendance-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
