@@ -11,6 +11,7 @@ import ItemRequests from './components/ItemRequests';
 import RequestDrawer from './components/RequestDrawer';
 import MediaModal from './components/MediaModal';
 import AttendanceModal from './components/AttendanceModal';
+import NotificationsBell from './components/NotificationsBell';
 import './styles/global.scss';
 import './styles/shared.scss';
 import './styles/drawer.scss';
@@ -192,6 +193,7 @@ function SupervisorDashboard({ onLogout }) {
           </Col>
           <Col>
             <div className="header-actions">
+              <NotificationsBell token={token} />
               <button className="btn-outline btn-small" onClick={() => setShowAttendanceModal(true)}>
                 Attendance
               </button>
